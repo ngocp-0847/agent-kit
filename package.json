@@ -1,0 +1,68 @@
+{
+  "name": "cursor-kit",
+  "version": "0.1.0",
+  "description": "CLI toolkit to manage Cursor IDE rules and commands",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "cursor-kit": "./dist/cli.js",
+    "ck": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/cli.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check --write",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cursor",
+    "cursor-ide",
+    "cli",
+    "rules",
+    "commands",
+    "ai",
+    "productivity"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/duongductrong/cursor-kit"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.8.2",
+    "citty": "^0.1.6",
+    "consola": "^3.2.3",
+    "defu": "^6.1.4",
+    "figlet": "^1.8.0",
+    "giget": "^1.2.3",
+    "gradient-string": "^3.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/figlet": "^1.7.0",
+    "@types/gradient-string": "^1.1.6",
+    "@types/node": "^22.9.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  }
+}
+
