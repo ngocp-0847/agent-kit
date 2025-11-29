@@ -11,7 +11,9 @@
   <sub>A CLI toolkit to manage, share, and sync Cursor IDE configurations</sub>
 </p>
 
----
+<p align="center">
+  <img src="./thumbnail.png" alt="Cursor Kit" width="768" />
+</p>
 
 ## 🚀 Quick Start
 
