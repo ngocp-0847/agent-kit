@@ -5,6 +5,19 @@ on:
     branches:
       - master
       - main
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version to release"
+        required: true
+        default: "0.0.0"
+      release-type:
+        description: "The release type"
+        required: true
+        default: "patch"
 
 permissions:
   contents: write
