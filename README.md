@@ -1,4 +1,4 @@
-# ✦ Cursor Kit
+<h1 align="center">✦ Cursor Kit ✦</h1>
 
 <p align="center">
   <img src="https://img.shields.io/npm/v/cursor-kit?style=flat-square&color=00DC82" alt="npm version" />
