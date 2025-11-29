@@ -76,7 +76,7 @@ jobs:
           fi
 
       - name: Publish to npm
-        run: pnpm publish --access public --no-git-checks --tag ${{ steps.npm-tag.outputs.tag }} --provenance
+        run: pnpm publish --access=public --no-git-checks --tag ${{ steps.npm-tag.outputs.tag }} --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
