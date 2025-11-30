@@ -12,6 +12,7 @@ on:
 permissions:
   contents: write
   id-token: write
+  pull-requests: write
 
 jobs:
   validate:
@@ -85,6 +86,9 @@ jobs:
     needs: validate
     if: needs.validate.outputs.is_prerelease == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release-flag.outputs.released }}
+      tag_name: ${{ steps.release-flag.outputs.tag_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -218,6 +222,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set release flag
+        id: release-flag
+        if: inputs.dry_run != true
+        run: |
+          echo "released=true" >> $GITHUB_OUTPUT
+          echo "tag_name=v${{ needs.validate.outputs.stable_version }}" >> $GITHUB_OUTPUT
+
       - name: Dry run summary
         if: inputs.dry_run == true
         run: |
@@ -252,4 +263,14 @@ jobs:
           echo "| Version | \`v${{ needs.validate.outputs.stable_version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Pre-releases consolidated | \`${{ needs.validate.outputs.prerelease_tags }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🚀 **npm publish will be triggered automatically by the release event.**" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **npm publish will be triggered automatically.**" >> $GITHUB_STEP_SUMMARY
+
+  publish:
+    name: Publish to npm
+    needs: promote
+    if: needs.promote.outputs.released == 'true'
+    uses: ./.github/workflows/publish.yml
+    with:
+      tag_name: ${{ needs.promote.outputs.tag_name }}
+      prerelease: false
+    secrets: inherit
