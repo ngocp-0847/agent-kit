@@ -42,7 +42,7 @@ export function printDivider(): void {
 
 export function printVersion(version: string): void {
   console.log(
-    pc.dim("  v") + cursorGradient(version) + pc.dim(" • Made with ♥")
+    pc.dim("  ") + cursorGradient(`v${version}`) + pc.dim(" • Made with ♥")
   );
   console.log();
 }
