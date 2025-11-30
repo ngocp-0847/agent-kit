@@ -1,83 +1,13 @@
 # Changelog
 
-## [1.1.1-beta](https://github.com/duongductrong/cursor-kit/compare/v1.1.0...v1.1.1-beta) (2025-11-30)
+## [1.1.1](https://github.com/duongductrong/cursor-kit/compare/v1.1.0...v1.1.1) (2025-11-30)
 
 
 ### 🏠 Chores
 
-* **release:** enhance release workflow to update CHANGELOG.md and generate structured release notes ([e937724](https://github.com/duongductrong/cursor-kit/commit/e9377240223672016bac83d5ef9ec63ec38da4f3))
+* chore(master): release 1.1.1-beta (#21) ([a70787b](https://github.com/duongductrong/cursor-kit/commit/a70787b15b687af61a99581cd9b53ea0aa99efb6))
+* chore(release): enhance release workflow to update CHANGELOG.md and generate structured release notes ([e937724](https://github.com/duongductrong/cursor-kit/commit/e9377240223672016bac83d5ef9ec63ec38da4f3))
 
-## [1.1.0-beta.6](https://github.com/duongductrong/cursor-kit/compare/v1.1.0-beta.5...v1.1.0-beta.6) (2025-11-30)
-
-
-### 🏠 Chores
-
-* **commands, rules:** enhance implementation and frontend design guidelines for production readiness ([bf8ba62](https://github.com/duongductrong/cursor-kit/commit/bf8ba627a9a472b5154da6bbf6808555c1216401))
-
-## [1.1.0-beta.5](https://github.com/duongductrong/cursor-kit/compare/v1.1.0-beta.4...v1.1.0-beta.5) (2025-11-30)
-
-
-### 🏠 Chores
-
-* **rules:** refine frontend design rule to include additional file types ([cb4fc89](https://github.com/duongductrong/cursor-kit/commit/cb4fc89d388fee839c0d0531f479bc7b34a6bf18))
-
-## [1.1.0-beta.4](https://github.com/duongductrong/cursor-kit/compare/v1.1.0-beta.3...v1.1.0-beta.4) (2025-11-30)
-
-
-### 🏠 Chores
-
-* **rules:** update frontend design rule to include additional file types ([4beb3c9](https://github.com/duongductrong/cursor-kit/commit/4beb3c9365a4f8b695def7d47eb0e207180db0c2))
-
-## [1.1.0-beta.3](https://github.com/duongductrong/cursor-kit/compare/v1.1.0-beta.2...v1.1.0-beta.3) (2025-11-30)
-
-
-### 📚 Documentation
-
-* **README:** update installation commands and template names ([4a52d03](https://github.com/duongductrong/cursor-kit/commit/4a52d03e924547b8e23e7849da5cc3000e53741f))
-
-## [1.1.0-beta.2](https://github.com/duongductrong/cursor-kit/compare/v1.0.4-beta.2...v1.1.0-beta.2) (2025-11-30)
-
-
-### 🚀 Features
-
-* **init:** enhance template installation process with conflict resolution and selection options ([418ae95](https://github.com/duongductrong/cursor-kit/commit/418ae95c9240a1b1f714920a9f9d1aedf9b2b138))
-* **rules:** add table of contents and frontend design rules ([431b6ed](https://github.com/duongductrong/cursor-kit/commit/431b6ed558a0d14c2dd3c62060985d1644658e87))
-
-
-### 🐛 Bug Fixes
-
-* **cli:** update version handling to dynamically read from package.json ([ed0ee43](https://github.com/duongductrong/cursor-kit/commit/ed0ee4377578817cf3b2f1a6f051a4688e6d5859))
-
-
-### ♻️ Code Refactoring
-
-* **commands:** streamline command templates and remove outdated files ([e9a0351](https://github.com/duongductrong/cursor-kit/commit/e9a03513f9b08dd012e5ac524189d6b56f6187fc))
-
-## [1.0.4-beta.2](https://github.com/duongductrong/cursor-kit/compare/v1.0.4-beta.1...v1.0.4-beta.2) (2025-11-30)
-
-
-### 🏠 Chores
-
-* **workflows:** enhance pre-release and publish workflows ([c713ee1](https://github.com/duongductrong/cursor-kit/commit/c713ee179483b410758f123f73a2bae9666d5d65))
-
-## [1.0.4-beta.1](https://github.com/duongductrong/cursor-kit/compare/v1.0.4-beta...v1.0.4-beta.1) (2025-11-30)
-
-
-### 📚 Documentation
-
-* enhance README with CLI aliases, new documentation command, and update command templates ([d01c48d](https://github.com/duongductrong/cursor-kit/commit/d01c48d0f04d013e755c45e89437ae88b435074d))
-
-
-### 🏠 Chores
-
-* **publish:** allow prerelease types in the publish workflow ([a0f4ea4](https://github.com/duongductrong/cursor-kit/commit/a0f4ea4fdf6b31cf6c51cd3407c0c66d1068b99b))
-
-## [1.0.4-beta](https://github.com/duongductrong/cursor-kit/compare/v1.0.3...v1.0.4-beta) (2025-11-30)
-
-
-### 🏠 Chores
-
-* **release:** implement pre-release workflow and remove promote stable release workflow ([42d6007](https://github.com/duongductrong/cursor-kit/commit/42d600760e3c336de1f1bf10fb88a39602781e08))
 
 ## [1.0.3](https://github.com/duongductrong/cursor-kit/compare/v1.0.2...v1.0.3) (2025-11-29)
 
