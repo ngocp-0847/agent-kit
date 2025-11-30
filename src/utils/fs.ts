@@ -67,3 +67,13 @@ export function getPackageJson(cwd: string = process.cwd()): Record<string, unkn
   }
 }
 
+export function getConflictingFiles(dir: string, files: string[]): string[] {
+  if (!dirExists(dir)) return [];
+  return files.filter((file) => fileExists(join(dir, file)));
+}
+
+export function getNonConflictingFiles(dir: string, files: string[]): string[] {
+  if (!dirExists(dir)) return files;
+  return files.filter((file) => !fileExists(join(dir, file)));
+}
+

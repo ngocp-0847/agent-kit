@@ -1,0 +1,23 @@
+{
+  "commands": [
+    "docs.md",
+    "explain.md",
+    "fix.md",
+    "implement.md",
+    "refactor.md",
+    "review.md",
+    "test.md"
+  ],
+  "rules": [
+    "coding-style.mdc",
+    "frontend-design.mdc",
+    "git.mdc",
+    "performance.mdc",
+    "react.mdc",
+    "security.mdc",
+    "testing.mdc",
+    "toc.mdc",
+    "typescript.mdc"
+  ]
+}
+

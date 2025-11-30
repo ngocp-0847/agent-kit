@@ -1,5 +1,4 @@
 Before answering:
-
 - Use `toc.mdc` to pick the most relevant rules (e.g.`frontend-design.mdc`, `performance.mdc` etc..).
 - Apply ONLY those selected rules.
 - If no rule clearly matches, ignore all rules and answer normally.
