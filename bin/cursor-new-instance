@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# OS guard – must be macOS
+if [ "$(uname)" != "Darwin" ]; then
+  echo "This command only works on macOS." >&2
+  exit 1
+fi
+
+
+# === Arguments ===
+NEW_APP_NAME="${1:-}"
+
+if [ -z "$NEW_APP_NAME" ]; then
+  echo "Usage: $0 \"New App Name (e.g. Cursor Enterprise)\"" >&2
+  exit 1
+fi
+
+# === Config based on name ===
+ORIG_APP_NAME="Cursor"
+ORIG_APP="/Applications/$ORIG_APP_NAME.app"
+
+# slug: lowercase, alphanumeric only, used in bundle id / data dir
+SLUG="$(echo "$NEW_APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')"
+[ -z "$SLUG" ] && SLUG="custom"
+
+BUNDLE_ID="com.cursor.$SLUG"
+TARGET_APP="$HOME/Applications/$NEW_APP_NAME.app"
+DATA_DIR="$HOME/Library/Application Support/${NEW_APP_NAME// /}"
+
+echo "New app name:      $NEW_APP_NAME"
+echo "Bundle identifier: $BUNDLE_ID"
+echo "Target app:        $TARGET_APP"
+echo "Data dir:          $DATA_DIR"
+echo
+
+# === Step 1: Copy original app ===
+if [ ! -d "$ORIG_APP" ]; then
+  echo "❌ Original app not found at: $ORIG_APP" >&2
+  exit 1
+fi
+
+echo "📁 Creating $HOME/Applications if needed..."
+mkdir -p "$HOME/Applications"
+
+echo "📦 Copying $ORIG_APP -> $TARGET_APP ..."
+cp -R "$ORIG_APP" "$TARGET_APP"
+
+# === Step 3: Give each app its own identity ===
+APP="$TARGET_APP"
+PLIST="$APP/Contents/Info.plist"
+
+echo "📝 Setting CFBundleIdentifier to $BUNDLE_ID in $PLIST ..."
+if /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$PLIST"; then
+  echo "✅ CFBundleIdentifier updated."
+else
+  echo "ℹ️ CFBundleIdentifier not found, adding..."
+  /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $BUNDLE_ID" "$PLIST"
+  echo "✅ CFBundleIdentifier added."
+fi
+
+echo "🔏 Re-signing app (ad-hoc signature)..."
+codesign --force --deep --sign - "$APP"
+
+# === Step 4: Create separate data folders ===
+echo "📂 Creating data dir: $DATA_DIR ..."
+mkdir -p "$DATA_DIR"
+
+# === Step 5: Launch ===
+echo "🚀 Launching $NEW_APP_NAME..."
+open -n "$APP" --args --user-data-dir "$DATA_DIR"
+
+echo "✅ Done."
+

@@ -6,6 +6,7 @@ import { addCommand } from "./commands/add";
 import { pullCommand } from "./commands/pull";
 import { listCommand } from "./commands/list";
 import { removeCommand } from "./commands/remove";
+import { instanceCommand } from "./commands/instance";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };
@@ -26,6 +27,7 @@ const main = defineCommand({
     pull: pullCommand,
     list: listCommand,
     remove: removeCommand,
+    instance: instanceCommand,
   },
 });
 
