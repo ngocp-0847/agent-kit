@@ -1,14 +1,15 @@
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REPO_RAW_URL, TEMPLATE_PATHS } from "./constants";
-import { fileExists, readFile, dirExists, listFiles } from "./fs";
+import { fileExists, readFile, dirExists, listFiles, listDirs, copyDir, ensureDir } from "./fs";
 
 export interface TemplateManifest {
   commands: string[];
   rules: string[];
+  skills: string[];
 }
 
-export type TemplateType = "commands" | "rules";
+export type TemplateType = "commands" | "rules" | "skills";
 
 export interface TemplateItem {
   name: string;
@@ -17,7 +18,6 @@ export interface TemplateItem {
 
 function getLocalTemplatesDir(): string {
   const currentDir = dirname(fileURLToPath(import.meta.url));
-  // From dist/ go up one level to package root, then into templates/
   return join(currentDir, "..", "templates");
 }
 
@@ -35,14 +35,16 @@ function getLocalManifest(): TemplateManifest | null {
 
   const commandsDir = join(templatesDir, "commands");
   const rulesDir = join(templatesDir, "rules");
+  const skillsDir = join(templatesDir, "skills");
 
-  if (!dirExists(commandsDir) && !dirExists(rulesDir)) {
+  if (!dirExists(commandsDir) && !dirExists(rulesDir) && !dirExists(skillsDir)) {
     return null;
   }
 
   return {
     commands: dirExists(commandsDir) ? listFiles(commandsDir, ".md") : [],
     rules: dirExists(rulesDir) ? listFiles(rulesDir, ".mdc") : [],
+    skills: dirExists(skillsDir) ? listDirs(skillsDir) : [],
   };
 }
 
@@ -55,6 +57,27 @@ function getLocalTemplateContent(type: TemplateType, filename: string): string |
   }
 
   return null;
+}
+
+export function getLocalSkillDir(skillName: string): string | null {
+  const templatesDir = getLocalTemplatesDir();
+  const skillPath = join(templatesDir, "skills", skillName);
+
+  if (dirExists(skillPath)) {
+    return skillPath;
+  }
+
+  return null;
+}
+
+export function copyLocalSkill(skillName: string, targetDir: string): boolean {
+  const sourcePath = getLocalSkillDir(skillName);
+  if (!sourcePath) return false;
+
+  const destPath = join(targetDir, skillName);
+  ensureDir(destPath);
+  copyDir(sourcePath, destPath);
+  return true;
 }
 
 export async function fetchTemplateManifest(): Promise<TemplateManifest> {
@@ -124,3 +147,9 @@ export function getTemplateLabel(filename: string): string {
     .join(" ");
 }
 
+export function getSkillLabel(skillName: string): string {
+  return skillName
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}

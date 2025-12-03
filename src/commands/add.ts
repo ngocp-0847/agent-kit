@@ -5,13 +5,15 @@ import {
   ensureDir,
   getCommandsDir,
   getRulesDir,
+  getSkillsDir,
   writeFile,
   fileExists,
+  dirExists,
 } from "../utils/fs";
 import { highlight } from "../utils/branding";
 import { join } from "node:path";
 
-type ItemType = "command" | "rule";
+type ItemType = "command" | "rule" | "skill";
 
 const COMMAND_TEMPLATE = `You are a helpful assistant. Describe what this command does.
 
@@ -41,6 +43,46 @@ Describe the rule behavior here.
 - Guideline 2
 `;
 
+const SKILL_TEMPLATE = `---
+description: Describe when this skill should be activated
+globs:
+alwaysApply: false
+---
+
+# Skill Name
+
+Brief description of what this skill enables.
+
+## Core Capabilities
+
+- Capability 1
+- Capability 2
+
+## When to Use
+
+Use this skill when:
+- Condition 1
+- Condition 2
+
+## References
+
+For detailed guidance, see the references folder:
+- [Reference 1](./references/example.md) - Description
+`;
+
+const SKILL_REFERENCE_TEMPLATE = `# Reference Title
+
+Detailed reference content goes here.
+
+## Section 1
+
+Content...
+
+## Section 2
+
+Content...
+`;
+
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
@@ -53,18 +95,18 @@ function generateSlug(name: string): string {
 export const addCommand = defineCommand({
   meta: {
     name: "add",
-    description: "Add a new command or rule",
+    description: "Add a new command, rule, or skill",
   },
   args: {
     type: {
       type: "string",
       alias: "t",
-      description: "Type: 'command' or 'rule'",
+      description: "Type: 'command', 'rule', or 'skill'",
     },
     name: {
       type: "string",
       alias: "n",
-      description: "Name of the command or rule",
+      description: "Name of the command, rule, or skill",
     },
   },
   async run({ args }) {
@@ -73,7 +115,7 @@ export const addCommand = defineCommand({
     let itemType: ItemType;
     let itemName: string;
 
-    if (args.type && ["command", "rule"].includes(args.type)) {
+    if (args.type && ["command", "rule", "skill"].includes(args.type)) {
       itemType = args.type as ItemType;
     } else {
       const typeResult = await p.select({
@@ -88,6 +130,11 @@ export const addCommand = defineCommand({
             value: "rule",
             label: "Rule",
             hint: "Project-specific AI behavior rules",
+          },
+          {
+            value: "skill",
+            label: "Skill",
+            hint: "Comprehensive guide with references",
           },
         ],
       });
@@ -105,7 +152,7 @@ export const addCommand = defineCommand({
     } else {
       const nameResult = await p.text({
         message: `Enter ${itemType} name:`,
-        placeholder: itemType === "command" ? "my-command" : "my-rule",
+        placeholder: itemType === "command" ? "my-command" : itemType === "rule" ? "my-rule" : "my-skill",
         validate: (value) => {
           if (!value.trim()) return "Name is required";
           if (value.length < 2) return "Name must be at least 2 characters";
@@ -123,13 +170,26 @@ export const addCommand = defineCommand({
 
     const slug = generateSlug(itemName);
     const isCommand = itemType === "command";
-    const targetDir = isCommand ? getCommandsDir() : getRulesDir();
-    const extension = isCommand ? ".md" : ".mdc";
-    const filePath = join(targetDir, `${slug}${extension}`);
+    const isRule = itemType === "rule";
+    const isSkill = itemType === "skill";
 
-    if (fileExists(filePath)) {
+    let targetPath: string;
+    let displayPath: string;
+
+    if (isSkill) {
+      const skillsDir = getSkillsDir();
+      targetPath = join(skillsDir, slug);
+      displayPath = targetPath;
+    } else {
+      const targetDir = isCommand ? getCommandsDir() : getRulesDir();
+      const extension = isCommand ? ".md" : ".mdc";
+      targetPath = join(targetDir, `${slug}${extension}`);
+      displayPath = targetPath;
+    }
+
+    if (isSkill ? dirExists(targetPath) : fileExists(targetPath)) {
       const shouldOverwrite = await p.confirm({
-        message: `${highlight(slug + extension)} already exists. Overwrite?`,
+        message: `${highlight(isSkill ? slug : slug + (isCommand ? ".md" : ".mdc"))} already exists. Overwrite?`,
         initialValue: false,
       });
 
@@ -143,14 +203,27 @@ export const addCommand = defineCommand({
     s.start(`Creating ${itemType}...`);
 
     try {
-      ensureDir(targetDir);
-      const template = isCommand ? COMMAND_TEMPLATE : RULE_TEMPLATE;
-      writeFile(filePath, template);
+      if (isSkill) {
+        ensureDir(targetPath);
+        ensureDir(join(targetPath, "references"));
+        writeFile(join(targetPath, "SKILL.mdc"), SKILL_TEMPLATE);
+        writeFile(join(targetPath, "references", "example.md"), SKILL_REFERENCE_TEMPLATE);
+      } else {
+        const targetDir = isCommand ? getCommandsDir() : getRulesDir();
+        ensureDir(targetDir);
+        const template = isCommand ? COMMAND_TEMPLATE : RULE_TEMPLATE;
+        writeFile(targetPath, template);
+      }
 
       s.stop(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} created`);
 
       console.log();
-      console.log(pc.dim("  File: ") + highlight(filePath));
+      if (isSkill) {
+        console.log(pc.dim("  Directory: ") + highlight(displayPath));
+        console.log(pc.dim("  Main file: ") + highlight(join(displayPath, "SKILL.mdc")));
+      } else {
+        console.log(pc.dim("  File: ") + highlight(displayPath));
+      }
       console.log();
 
       p.outro(
@@ -163,4 +236,3 @@ export const addCommand = defineCommand({
     }
   },
 });
-

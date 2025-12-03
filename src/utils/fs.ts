@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, statSync, cpSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 export function ensureDir(path: string): void {
@@ -30,6 +30,10 @@ export function removeFile(path: string): void {
   }
 }
 
+export function copyDir(src: string, dest: string): void {
+  cpSync(src, dest, { recursive: true });
+}
+
 export function listFiles(dir: string, extension?: string): string[] {
   if (!dirExists(dir)) return [];
   
@@ -38,6 +42,15 @@ export function listFiles(dir: string, extension?: string): string[] {
     return files.filter((f) => f.endsWith(extension));
   }
   return files;
+}
+
+export function listDirs(dir: string): string[] {
+  if (!dirExists(dir)) return [];
+  
+  return readdirSync(dir).filter((item) => {
+    const itemPath = join(dir, item);
+    return statSync(itemPath).isDirectory();
+  });
 }
 
 export function getCursorDir(cwd: string = process.cwd()): string {
@@ -50,6 +63,10 @@ export function getCommandsDir(cwd: string = process.cwd()): string {
 
 export function getRulesDir(cwd: string = process.cwd()): string {
   return join(getCursorDir(cwd), "rules");
+}
+
+export function getSkillsDir(cwd: string = process.cwd()): string {
+  return join(getCursorDir(cwd), "skills");
 }
 
 export function resolveFromCwd(...paths: string[]): string {
@@ -72,8 +89,17 @@ export function getConflictingFiles(dir: string, files: string[]): string[] {
   return files.filter((file) => fileExists(join(dir, file)));
 }
 
+export function getConflictingDirs(dir: string, dirs: string[]): string[] {
+  if (!dirExists(dir)) return [];
+  return dirs.filter((d) => dirExists(join(dir, d)));
+}
+
 export function getNonConflictingFiles(dir: string, files: string[]): string[] {
   if (!dirExists(dir)) return files;
   return files.filter((file) => !fileExists(join(dir, file)));
 }
 
+export function getNonConflictingDirs(dir: string, dirs: string[]): string[] {
+  if (!dirExists(dir)) return dirs;
+  return dirs.filter((d) => !dirExists(join(dir, d)));
+}

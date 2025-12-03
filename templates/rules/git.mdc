@@ -1,6 +1,4 @@
 ---
-description: Git commit and branching conventions
-globs: 
 alwaysApply: true
 ---
 

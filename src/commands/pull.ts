@@ -6,7 +6,9 @@ import {
   ensureDir,
   getCommandsDir,
   getRulesDir,
+  getSkillsDir,
   listFiles,
+  listDirs,
   getCursorDir,
 } from "../utils/fs";
 import { REPO_URL, REPO_REF } from "../utils/constants";
@@ -30,6 +32,12 @@ export const pullCommand = defineCommand({
       description: "Only pull rules",
       default: false,
     },
+    skills: {
+      type: "boolean",
+      alias: "s",
+      description: "Only pull skills",
+      default: false,
+    },
     force: {
       type: "boolean",
       alias: "f",
@@ -38,18 +46,21 @@ export const pullCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const pullBoth = !args.commands && !args.rules;
-    const shouldPullCommands = pullBoth || args.commands;
-    const shouldPullRules = pullBoth || args.rules;
+    const pullAll = !args.commands && !args.rules && !args.skills;
+    const shouldPullCommands = pullAll || args.commands;
+    const shouldPullRules = pullAll || args.rules;
+    const shouldPullSkills = pullAll || args.skills;
 
     p.intro(pc.bgCyan(pc.black(" cursor-kit pull ")));
 
     const commandsDir = getCommandsDir();
     const rulesDir = getRulesDir();
+    const skillsDir = getSkillsDir();
 
     const existingCommands = listFiles(commandsDir, ".md");
     const existingRules = listFiles(rulesDir, ".mdc");
-    const hasExisting = existingCommands.length > 0 || existingRules.length > 0;
+    const existingSkills = listDirs(skillsDir);
+    const hasExisting = existingCommands.length > 0 || existingRules.length > 0 || existingSkills.length > 0;
 
     if (hasExisting && !args.force) {
       printInfo("Current status:");
@@ -58,6 +69,9 @@ export const pullCommand = defineCommand({
       }
       if (existingRules.length > 0) {
         console.log(pc.dim(`  Rules: ${existingRules.length} files`));
+      }
+      if (existingSkills.length > 0) {
+        console.log(pc.dim(`  Skills: ${existingSkills.length} directories`));
       }
       console.log();
 
@@ -95,11 +109,21 @@ export const pullCommand = defineCommand({
         s.stop("Rules updated");
       }
 
+      if (shouldPullSkills) {
+        s.start("Pulling skills...");
+        await downloadTemplate(`${REPO_URL}/templates/skills#${REPO_REF}`, {
+          dir: skillsDir,
+          force: true,
+        });
+        s.stop("Skills updated");
+      }
+
       printDivider();
       console.log();
 
       const newCommands = listFiles(commandsDir, ".md");
       const newRules = listFiles(rulesDir, ".mdc");
+      const newSkills = listDirs(skillsDir);
 
       if (shouldPullCommands) {
         const added = newCommands.length - existingCommands.length;
@@ -117,6 +141,14 @@ export const pullCommand = defineCommand({
         );
       }
 
+      if (shouldPullSkills) {
+        const added = newSkills.length - existingSkills.length;
+        printSuccess(
+          `Skills: ${highlight(newSkills.length.toString())} total` +
+            (added > 0 ? pc.green(` (+${added} new)`) : "")
+        );
+      }
+
       console.log();
       p.outro(pc.green("✨ Successfully pulled latest updates!"));
     } catch (error) {
@@ -126,4 +158,3 @@ export const pullCommand = defineCommand({
     }
   },
 });
-

@@ -7,7 +7,9 @@ import {
   getCursorDir,
   getCommandsDir,
   getRulesDir,
+  getSkillsDir,
   getConflictingFiles,
+  getConflictingDirs,
   writeFile,
 } from "../utils/fs";
 import { highlight, printDivider, printSuccess } from "../utils/branding";
@@ -15,6 +17,8 @@ import {
   fetchTemplateManifest,
   fetchMultipleTemplates,
   getTemplateLabel,
+  getSkillLabel,
+  copyLocalSkill,
   type TemplateManifest,
   type TemplateType,
 } from "../utils/templates";
@@ -30,6 +34,8 @@ async function selectTemplates(
   type: TemplateType,
   availableTemplates: string[]
 ): Promise<string[] | symbol> {
+  const labelFn = type === "skills" ? getSkillLabel : getTemplateLabel;
+
   const selectionMode = await p.select({
     message: `How would you like to add ${type}?`,
     options: [
@@ -56,7 +62,7 @@ async function selectTemplates(
     message: `Select ${type} to add:`,
     options: availableTemplates.map((template) => ({
       value: template,
-      label: getTemplateLabel(template),
+      label: labelFn(template),
       hint: template,
     })),
     required: true,
@@ -141,11 +147,48 @@ async function installTemplates(
   return result;
 }
 
+async function installSkills(
+  targetDir: string,
+  selectedSkills: string[],
+  conflictStrategy: ConflictStrategy
+): Promise<InitResult> {
+  const result: InitResult = { added: [], skipped: [] };
+  const conflictingDirs = getConflictingDirs(targetDir, selectedSkills);
+
+  let skillsToInstall: string[];
+
+  if (conflictStrategy === "merge") {
+    skillsToInstall = selectedSkills.filter(
+      (s) => !conflictingDirs.includes(s)
+    );
+    result.skipped = conflictingDirs.filter((d) =>
+      selectedSkills.includes(d)
+    );
+  } else {
+    skillsToInstall = selectedSkills;
+  }
+
+  if (skillsToInstall.length === 0) {
+    return result;
+  }
+
+  ensureDir(targetDir);
+
+  for (const skillName of skillsToInstall) {
+    const success = copyLocalSkill(skillName, targetDir);
+    if (success) {
+      result.added.push(skillName);
+    }
+  }
+
+  return result;
+}
+
 export const initCommand = defineCommand({
   meta: {
     name: "init",
     description:
-      "Initialize .cursor/commands and .cursor/rules in your project",
+      "Initialize .cursor/commands, .cursor/rules, and .cursor/skills in your project",
   },
   args: {
     force: {
@@ -166,6 +209,12 @@ export const initCommand = defineCommand({
       description: "Only initialize rules",
       default: false,
     },
+    skills: {
+      type: "boolean",
+      alias: "s",
+      description: "Only initialize skills",
+      default: false,
+    },
     all: {
       type: "boolean",
       alias: "a",
@@ -178,10 +227,12 @@ export const initCommand = defineCommand({
     const cursorDir = getCursorDir(cwd);
     const commandsDir = getCommandsDir(cwd);
     const rulesDir = getRulesDir(cwd);
+    const skillsDir = getSkillsDir(cwd);
 
-    const initBoth = !args.commands && !args.rules;
-    const shouldInitCommands = initBoth || args.commands;
-    const shouldInitRules = initBoth || args.rules;
+    const initAll = !args.commands && !args.rules && !args.skills;
+    const shouldInitCommands = initAll || args.commands;
+    const shouldInitRules = initAll || args.rules;
+    const shouldInitSkills = initAll || args.skills;
 
     p.intro(pc.bgCyan(pc.black(" cursor-kit init ")));
 
@@ -204,6 +255,7 @@ export const initCommand = defineCommand({
     const results: {
       commands?: InitResult;
       rules?: InitResult;
+      skills?: InitResult;
     } = {};
 
     try {
@@ -284,6 +336,41 @@ export const initCommand = defineCommand({
         s.stop("Rules installed");
       }
 
+      if (shouldInitSkills) {
+        let selectedSkills: string[];
+
+        if (args.all) {
+          selectedSkills = manifest.skills;
+        } else {
+          const selection = await selectTemplates("skills", manifest.skills);
+          if (p.isCancel(selection)) {
+            p.cancel("Operation cancelled");
+            process.exit(0);
+          }
+          selectedSkills = selection;
+        }
+
+        const conflictingSkills = getConflictingDirs(skillsDir, selectedSkills);
+        let skillStrategy: ConflictStrategy = "overwrite";
+
+        if (conflictingSkills.length > 0 && !args.force) {
+          const strategy = await handleConflicts("skills", conflictingSkills);
+          if (p.isCancel(strategy) || strategy === "cancel") {
+            p.cancel("Operation cancelled");
+            process.exit(0);
+          }
+          skillStrategy = strategy;
+        }
+
+        s.start("Installing skills...");
+        results.skills = await installSkills(
+          skillsDir,
+          selectedSkills,
+          skillStrategy
+        );
+        s.stop("Skills installed");
+      }
+
       printDivider();
       console.log();
 
@@ -317,12 +404,29 @@ export const initCommand = defineCommand({
         }
       }
 
+      if (results.skills) {
+        const { added, skipped } = results.skills;
+        if (added.length > 0 || skipped.length > 0) {
+          printSuccess(
+            `Skills: ${highlight(added.length.toString())} added${skipped.length > 0 ? `, ${pc.yellow(skipped.length.toString())} skipped` : ""}`
+          );
+          for (const f of added) {
+            console.log(pc.dim(`   └─ ${pc.green("+")} ${f}`));
+          }
+          for (const f of skipped) {
+            console.log(pc.dim(`   └─ ${pc.yellow("○")} ${f} (kept existing)`));
+          }
+        }
+      }
+
       const totalAdded =
         (results.commands?.added.length ?? 0) +
-        (results.rules?.added.length ?? 0);
+        (results.rules?.added.length ?? 0) +
+        (results.skills?.added.length ?? 0);
       const totalSkipped =
         (results.commands?.skipped.length ?? 0) +
-        (results.rules?.skipped.length ?? 0);
+        (results.rules?.skipped.length ?? 0) +
+        (results.skills?.skipped.length ?? 0);
 
       if (totalAdded === 0 && totalSkipped > 0) {
         console.log();

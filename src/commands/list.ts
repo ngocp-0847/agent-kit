@@ -4,9 +4,12 @@ import pc from "picocolors";
 import {
   getCommandsDir,
   getRulesDir,
+  getSkillsDir,
   listFiles,
+  listDirs,
   readFile,
   fileExists,
+  dirExists,
 } from "../utils/fs";
 import { highlight, printDivider } from "../utils/branding";
 import { join } from "node:path";
@@ -45,10 +48,35 @@ function getItems(dir: string, extension: string, isCommand: boolean): ItemInfo[
   });
 }
 
+function getSkills(dir: string): ItemInfo[] {
+  const skillDirs = listDirs(dir);
+  return skillDirs.map((skillName) => {
+    const skillPath = join(dir, skillName);
+    const skillFile = join(skillPath, "SKILL.mdc");
+    const altSkillFile = join(skillPath, "SKILL.md");
+    
+    let description: string | undefined;
+    
+    if (fileExists(skillFile)) {
+      const content = readFile(skillFile);
+      description = extractDescription(content, false);
+    } else if (fileExists(altSkillFile)) {
+      const content = readFile(altSkillFile);
+      description = extractDescription(content, false);
+    }
+    
+    return {
+      name: skillName,
+      path: skillPath,
+      description,
+    };
+  });
+}
+
 export const listCommand = defineCommand({
   meta: {
     name: "list",
-    description: "List all commands and rules",
+    description: "List all commands, rules, and skills",
   },
   args: {
     commands: {
@@ -63,6 +91,12 @@ export const listCommand = defineCommand({
       description: "Only list rules",
       default: false,
     },
+    skills: {
+      type: "boolean",
+      alias: "s",
+      description: "Only list skills",
+      default: false,
+    },
     verbose: {
       type: "boolean",
       alias: "v",
@@ -71,21 +105,24 @@ export const listCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const listBoth = !args.commands && !args.rules;
-    const shouldListCommands = listBoth || args.commands;
-    const shouldListRules = listBoth || args.rules;
+    const listAll = !args.commands && !args.rules && !args.skills;
+    const shouldListCommands = listAll || args.commands;
+    const shouldListRules = listAll || args.rules;
+    const shouldListSkills = listAll || args.skills;
 
     p.intro(pc.bgCyan(pc.black(" cursor-kit list ")));
 
     const commandsDir = getCommandsDir();
     const rulesDir = getRulesDir();
+    const skillsDir = getSkillsDir();
 
     const commands = shouldListCommands ? getItems(commandsDir, ".md", true) : [];
     const rules = shouldListRules ? getItems(rulesDir, ".mdc", false) : [];
+    const skills = shouldListSkills ? getSkills(skillsDir) : [];
 
-    if (commands.length === 0 && rules.length === 0) {
+    if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
       console.log();
-      console.log(pc.yellow("  No commands or rules found."));
+      console.log(pc.yellow("  No commands, rules, or skills found."));
       console.log(pc.dim("  Run ") + highlight("cursor-kit init") + pc.dim(" to get started."));
       console.log();
       p.outro(pc.dim("Nothing to show"));
@@ -126,11 +163,26 @@ export const listCommand = defineCommand({
       });
     }
 
+    if (shouldListSkills && skills.length > 0) {
+      console.log();
+      console.log(pc.bold(pc.cyan("  🎯 Skills")) + pc.dim(` (${skills.length})`));
+      console.log();
+
+      skills.forEach((skill) => {
+        console.log(`  ${pc.green("●")} ${highlight(skill.name)}`);
+        if (skill.description) {
+          console.log(pc.dim(`    ${skill.description}`));
+        }
+        if (args.verbose) {
+          console.log(pc.dim(`    ${skill.path}`));
+        }
+      });
+    }
+
     console.log();
     printDivider();
 
-    const total = commands.length + rules.length;
+    const total = commands.length + rules.length + skills.length;
     p.outro(pc.dim(`Total: ${total} item${total !== 1 ? "s" : ""}`));
   },
 });
-

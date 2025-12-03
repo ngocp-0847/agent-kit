@@ -10,14 +10,17 @@
   ],
   "rules": [
     "coding-style.mdc",
-    "frontend-design.mdc",
     "git.mdc",
-    "performance.mdc",
-    "react.mdc",
-    "security.mdc",
-    "testing.mdc",
-    "toc.mdc",
-    "typescript.mdc"
+    "toc.mdc"
+  ],
+  "skills": [
+    "aesthetic",
+    "backend-development",
+    "frontend-design",
+    "frontend-development",
+    "problem-solving",
+    "research",
+    "sequential-thinking",
+    "ui-styling"
   ]
 }
-
