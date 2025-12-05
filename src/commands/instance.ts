@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { existsSync, chmodSync, readdirSync } from "node:fs";
 import { highlight, printDivider, printSuccess, printInfo, printWarning } from "../utils/branding";
 
-type InstanceAction = "create" | "remove";
+type InstanceAction = "create" | "remove" | "reinstall";
 
 interface InstanceInfo {
   name: string;
@@ -82,7 +82,7 @@ export const instanceCommand = defineCommand({
     action: {
       type: "string",
       alias: "a",
-      description: "Action: 'create' or 'remove'",
+      description: "Action: 'create', 'reinstall', or 'remove'",
     },
     name: {
       type: "string",
@@ -140,8 +140,9 @@ export const instanceCommand = defineCommand({
     const binPath = getBinPath();
     const createScript = join(binPath, "cursor-new-instance");
     const removeScript = join(binPath, "cursor-remove-instance");
+    const reinstallScript = join(binPath, "cursor-reinstall-instance.sh");
 
-    const scriptsExist = existsSync(createScript) && existsSync(removeScript);
+    const scriptsExist = existsSync(createScript) && existsSync(removeScript) && existsSync(reinstallScript);
     if (!scriptsExist) {
       s.stop("Prerequisites check failed");
       console.log();
@@ -172,7 +173,7 @@ export const instanceCommand = defineCommand({
     let instanceName: string;
 
     // Determine action
-    if (args.action && ["create", "remove"].includes(args.action)) {
+    if (args.action && ["create", "remove", "reinstall"].includes(args.action)) {
       action = args.action as InstanceAction;
     } else {
       const actionResult = await p.select({
@@ -182,6 +183,13 @@ export const instanceCommand = defineCommand({
             value: "create",
             label: "Create new instance",
             hint: "Clone Cursor with separate identity",
+          },
+          {
+            value: "reinstall",
+            label: "Reinstall instance",
+            hint: existingInstances.length > 0
+              ? "Fix broken instance after Cursor update"
+              : "No instances to reinstall",
           },
           {
             value: "remove",
@@ -204,10 +212,11 @@ export const instanceCommand = defineCommand({
     // Get instance name
     if (args.name) {
       instanceName = args.name;
-    } else if (action === "remove" && existingInstances.length > 0) {
-      // For remove action, show existing instances to select from
+    } else if ((action === "remove" || action === "reinstall") && existingInstances.length > 0) {
+      // For remove/reinstall actions, show existing instances to select from
+      const actionLabel = action === "remove" ? "remove" : "reinstall";
       const instanceResult = await p.select({
-        message: "Select instance to remove:",
+        message: `Select instance to ${actionLabel}:`,
         options: existingInstances.map((inst) => ({
           value: inst.name,
           label: inst.name,
@@ -221,9 +230,9 @@ export const instanceCommand = defineCommand({
       }
 
       instanceName = instanceResult as string;
-    } else if (action === "remove" && existingInstances.length === 0) {
+    } else if ((action === "remove" || action === "reinstall") && existingInstances.length === 0) {
       console.log();
-      printInfo("No custom Cursor instances found to remove.");
+      printInfo(`No custom Cursor instances found to ${action}.`);
       console.log();
       p.outro(pc.dim("Nothing to do"));
       return;
@@ -256,13 +265,19 @@ export const instanceCommand = defineCommand({
     console.log();
     console.log(pc.bold(pc.cyan("  📋 Summary")));
     console.log();
-    console.log(`  ${pc.dim("Action:")}    ${action === "create" ? pc.green("Create") : pc.yellow("Remove")}`);
+    const actionColor = action === "create" ? pc.green : action === "reinstall" ? pc.blue : pc.yellow;
+    const actionLabel = action === "create" ? "Create" : action === "reinstall" ? "Reinstall" : "Remove";
+    console.log(`  ${pc.dim("Action:")}    ${actionColor(actionLabel)}`);
     console.log(`  ${pc.dim("Instance:")}  ${highlight(instanceName)}`);
 
-    if (action === "create") {
+    if (action === "create" || action === "reinstall") {
       const slug = instanceName.toLowerCase().replace(/[^a-z0-9]/g, "");
       console.log(`  ${pc.dim("Bundle ID:")} ${pc.dim("com.cursor.")}${highlight(slug)}`);
       console.log(`  ${pc.dim("Location:")}  ${pc.dim("~/Applications/")}${highlight(instanceName + ".app")}`);
+      if (action === "reinstall") {
+        const dataDir = join(process.env.HOME ?? "", "Library", "Application Support", instanceName.replace(/ /g, ""));
+        console.log(`  ${pc.dim("Data:")}      ${pc.green("✓")} ${pc.dim("Preserved at")} ${pc.dim(dataDir)}`);
+      }
     } else {
       const targetPath = join(process.env.HOME ?? "", "Applications", `${instanceName}.app`);
       console.log(`  ${pc.dim("Path:")}      ${pc.dim(targetPath)}`);
@@ -275,8 +290,10 @@ export const instanceCommand = defineCommand({
     const shouldContinue = await p.confirm({
       message: action === "create"
         ? "Create this Cursor instance?"
+        : action === "reinstall"
+        ? "Reinstall this instance? (User data will be preserved)"
         : "Remove this Cursor instance? This cannot be undone.",
-      initialValue: action === "create",
+      initialValue: action !== "remove",
     });
 
     if (p.isCancel(shouldContinue) || !shouldContinue) {
@@ -289,9 +306,15 @@ export const instanceCommand = defineCommand({
     printDivider();
     console.log();
 
-    const scriptPath = action === "create" ? createScript : removeScript;
-    // Pass --yes to remove script since we already confirmed in the CLI
-    const scriptArgs = action === "remove" ? ["--yes", instanceName] : [instanceName];
+    const scriptPath = action === "create" 
+      ? createScript 
+      : action === "reinstall"
+      ? reinstallScript
+      : removeScript;
+    // Pass --yes to remove/reinstall scripts since we already confirmed in the CLI
+    const scriptArgs = action === "remove" || action === "reinstall" 
+      ? ["--yes", instanceName] 
+      : [instanceName];
     const exitCode = await runScript(scriptPath, scriptArgs);
 
     console.log();
@@ -306,6 +329,13 @@ export const instanceCommand = defineCommand({
         console.log(pc.dim("  • The new instance should launch automatically"));
         console.log(pc.dim("  • Sign in with a different Cursor account"));
         console.log(pc.dim("  • Find it in ~/Applications/"));
+      } else if (action === "reinstall") {
+        printSuccess(`Instance ${highlight(instanceName)} reinstalled successfully!`);
+        console.log();
+        console.log(pc.dim("  The instance has been:"));
+        console.log(pc.dim("  • Refreshed with the latest Cursor version"));
+        console.log(pc.dim("  • Relaunched with your preserved data"));
+        console.log(pc.dim("  • Ready to use with your existing account"));
       } else {
         printSuccess(`Instance ${highlight(instanceName)} removed successfully!`);
       }
