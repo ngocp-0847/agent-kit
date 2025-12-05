@@ -106,10 +106,11 @@ Manage multiple Cursor IDE instances for multi-account login. **macOS only.**
 This command allows you to create separate Cursor instances, each with its own identity (bundle ID) and data directory. Perfect for users who need to work with multiple Cursor accounts simultaneously.
 
 ```bash
-cursor-kit instance                           # Interactive mode
-cursor-kit instance -l                        # List existing instances
-cursor-kit instance -a create -n "Cursor Work"    # Create instance
-cursor-kit instance -a remove -n "Cursor Work"    # Remove instance
+cursor-kit instance                                  # Interactive mode
+cursor-kit instance -l                               # List existing instances
+cursor-kit instance -a create -n "Cursor Work"       # Create instance
+cursor-kit instance -a reinstall -n "Cursor Work"    # Reinstall instance (fix after updates)
+cursor-kit instance -a remove -n "Cursor Work"       # Remove instance
 ```
 
 **How it works:**
@@ -118,6 +119,7 @@ cursor-kit instance -a remove -n "Cursor Work"    # Remove instance
 - Creates a separate data directory in `~/Library/Application Support/`
 - Re-signs the app with an ad-hoc signature
 - Each instance can be logged into with a different Cursor account
+- Reinstall refreshes the instance with the latest Cursor version while preserving your data
 
 **Example workflow:**
 ```bash
@@ -129,6 +131,9 @@ cursor-kit instance -a create -n "Cursor Personal"
 
 # List all your instances
 cursor-kit instance --list
+
+# Fix an instance after Cursor update (preserves your data)
+cursor-kit instance -a reinstall -n "Cursor Enterprise"
 
 # Remove an instance when no longer needed
 cursor-kit instance -a remove -n "Cursor Personal"
