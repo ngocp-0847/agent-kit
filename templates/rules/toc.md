@@ -24,5 +24,5 @@ You have multiple specialized rules organized into **Skills** (comprehensive gui
 
 1. For each user request, first infer which domains are relevant.
 2. Select 0–3 rules/skills that best match the request, prefer the SINGLE most specific one when possible.
-3. If both security and performance apply, prioritize `security.md` first, then `performance.md`.
+3. If both security and performance apply, prioritize `security.mdc` first, then `performance.mdc`.
 4. If no rule clearly matches, ignore all rules and answer normally.

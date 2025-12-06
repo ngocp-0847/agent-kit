@@ -20,6 +20,7 @@ import {
   getSkillLabel,
   copyLocalSkill,
   convertMdToMdc,
+  transformTocContentForCursor,
   type TemplateManifest,
   type TemplateType,
 } from "../utils/templates";
@@ -303,8 +304,15 @@ async function installTemplates(
     const outputFilename = target === "cursor" && type === "rules" && filename.endsWith(".md")
       ? convertMdToMdc(filename)
       : filename;
+    
+    // Transform toc.md content for Cursor to fix links
+    let transformedContent = content;
+    if (target === "cursor" && type === "rules" && filename === "toc.md") {
+      transformedContent = transformTocContentForCursor(content);
+    }
+    
     const filePath = join(targetDir, outputFilename);
-    writeFile(filePath, content);
+    writeFile(filePath, transformedContent);
     result.added.push(outputFilename);
   }
 

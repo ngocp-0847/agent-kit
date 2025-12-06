@@ -82,6 +82,16 @@ export function convertMdToMdc(filename: string): string {
   return filename.replace(/\.md$/, ".mdc");
 }
 
+export function transformTocContentForCursor(content: string): string {
+  // Transform skill links: SKILL.md -> SKILL.mdc
+  content = content.replace(/\]\(\.\.\/skills\/([^/]+)\/SKILL\.md\)/g, '](../skills/$1/SKILL.mdc)');
+  
+  // Transform rule links: .md -> .mdc (for rules in the same directory)
+  content = content.replace(/\]\(\.\/([^)]+)\.md\)/g, '](./$1.mdc)');
+  
+  return content;
+}
+
 export function copyLocalSkill(
   skillName: string,
   targetDir: string,
