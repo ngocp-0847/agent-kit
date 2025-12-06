@@ -11,6 +11,10 @@ import {
   getConflictingFiles,
   getConflictingDirs,
   writeFile,
+  getAgentDir,
+  getAgentRulesDir,
+  getAgentWorkflowsDir,
+  getAgentSkillsDir,
 } from "../utils/fs";
 import { highlight, printDivider, printSuccess } from "../utils/branding";
 import {
@@ -21,6 +25,9 @@ import {
   copyLocalSkill,
   convertMdToMdc,
   transformTocContentForCursor,
+  transformRuleForAntiGravity,
+  transformCommandToWorkflow,
+  copyLocalSkillForAntiGravity,
   type TemplateManifest,
   type TemplateType,
 } from "../utils/templates";
@@ -50,6 +57,11 @@ async function promptTargetSelection(): Promise<InstructionTarget | symbol> {
         value: "github-copilot" as const,
         label: "GitHub Copilot",
         hint: "Generate .github/copilot-instructions.md",
+      },
+      {
+        value: "google-antigravity" as const,
+        label: "Google AntiGravity",
+        hint: "Generate .agent/ directory with rules and workflows",
       },
     ],
     initialValue: "cursor",
@@ -166,6 +178,186 @@ async function handleCopilotInstallation(
 
     console.log();
     p.outro(pc.green("✨ GitHub Copilot instructions created successfully!"));
+  } catch (error) {
+    s.stop("Failed");
+    p.cancel(
+      `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+    process.exit(1);
+  }
+}
+
+async function handleAntiGravityInstallation(
+  cwd: string,
+  manifest: TemplateManifest,
+  args: {
+    all?: boolean;
+    commands?: boolean;
+    rules?: boolean;
+    skills?: boolean;
+    force?: boolean;
+  },
+  shouldInitCommands: boolean,
+  shouldInitRules: boolean,
+  shouldInitSkills: boolean
+): Promise<void> {
+  const s = p.spinner();
+  const agentDir = getAgentDir(cwd);
+  const rulesDir = getAgentRulesDir(cwd);
+  const workflowsDir = getAgentWorkflowsDir(cwd);
+  const skillsDir = getAgentSkillsDir(cwd);
+
+  // Check for existing conflicts
+  const existingRules = getConflictingFiles(rulesDir, manifest.rules);
+  const existingWorkflows = getConflictingFiles(workflowsDir, manifest.commands);
+  const existingSkills = getConflictingDirs(skillsDir, manifest.skills);
+
+  if ((existingRules.length > 0 || existingWorkflows.length > 0 || existingSkills.length > 0) && !args.force) {
+    console.log();
+    console.log(pc.yellow("⚠ Existing files found:"));
+    for (const file of [...existingRules, ...existingWorkflows, ...existingSkills]) {
+      console.log(pc.dim(`   └─ ${file}`));
+    }
+    console.log();
+
+    const proceed = await p.confirm({
+      message: "Overwrite existing files?",
+      initialValue: false,
+    });
+
+    if (p.isCancel(proceed) || !proceed) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+  }
+
+  let selectedCommands: string[] = [];
+  let selectedRules: string[] = [];
+  let selectedSkills: string[] = [];
+
+  // Commands become workflows in AntiGravity
+  if (shouldInitCommands) {
+    if (args.all) {
+      selectedCommands = manifest.commands;
+    } else {
+      const selection = await selectTemplates("commands", manifest.commands);
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      selectedCommands = selection;
+    }
+  }
+
+  if (shouldInitRules) {
+    if (args.all) {
+      selectedRules = manifest.rules;
+    } else {
+      const selection = await selectTemplates("rules", manifest.rules);
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      selectedRules = selection;
+    }
+  }
+
+  if (shouldInitSkills) {
+    if (args.all) {
+      selectedSkills = manifest.skills;
+    } else {
+      const selection = await selectTemplates("skills", manifest.skills);
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      selectedSkills = selection;
+    }
+  }
+
+  if (selectedCommands.length === 0 && selectedRules.length === 0 && selectedSkills.length === 0) {
+    p.cancel("No templates selected");
+    process.exit(0);
+  }
+
+  const results = {
+    workflows: [] as string[],
+    rules: [] as string[],
+    skills: [] as string[],
+  };
+
+  try {
+    ensureDir(agentDir);
+    ensureDir(rulesDir);
+    ensureDir(workflowsDir);
+    ensureDir(skillsDir);
+
+    // Install commands as workflows
+    if (selectedCommands.length > 0) {
+      s.start("Installing workflows...");
+      const templates = await fetchMultipleTemplates("commands", selectedCommands);
+      
+      for (const [filename, content] of templates) {
+        const transformedContent = transformCommandToWorkflow(content, filename);
+        const filePath = join(workflowsDir, filename);
+        writeFile(filePath, transformedContent);
+        results.workflows.push(filename);
+      }
+      s.stop("Workflows installed");
+    }
+
+    // Install rules with AntiGravity format
+    if (selectedRules.length > 0) {
+      s.start("Installing rules...");
+      const templates = await fetchMultipleTemplates("rules", selectedRules);
+      
+      for (const [filename, content] of templates) {
+        const transformedContent = transformRuleForAntiGravity(content, filename);
+        const filePath = join(rulesDir, filename);
+        writeFile(filePath, transformedContent);
+        results.rules.push(filename);
+      }
+      s.stop("Rules installed");
+    }
+
+    // Install skills with AntiGravity format
+    if (selectedSkills.length > 0) {
+      s.start("Installing skills...");
+      for (const skillName of selectedSkills) {
+        const success = copyLocalSkillForAntiGravity(skillName, skillsDir);
+        if (success) {
+          results.skills.push(skillName);
+        }
+      }
+      s.stop("Skills installed");
+    }
+
+    printDivider();
+    console.log();
+
+    if (results.workflows.length > 0) {
+      printSuccess(`Workflows: ${highlight(results.workflows.length.toString())} added`);
+      for (const wf of results.workflows) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${wf}`));
+      }
+    }
+
+    if (results.rules.length > 0) {
+      printSuccess(`Rules: ${highlight(results.rules.length.toString())} added`);
+      for (const rule of results.rules) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${rule}`));
+      }
+    }
+
+    if (results.skills.length > 0) {
+      printSuccess(`Skills: ${highlight(results.skills.length.toString())} added`);
+      for (const skill of results.skills) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${skill}`));
+      }
+    }
+
+    console.log();
+    p.outro(pc.green("✨ Google AntiGravity configuration created successfully!"));
   } catch (error) {
     s.stop("Failed");
     p.cancel(
@@ -400,7 +592,7 @@ export const initCommand = defineCommand({
     target: {
       type: "string",
       alias: "t",
-      description: "Target AI IDE: 'cursor' or 'github-copilot'",
+      description: "Target AI IDE: 'cursor', 'github-copilot', or 'google-antigravity'",
       default: undefined,
     },
   },
@@ -419,7 +611,7 @@ export const initCommand = defineCommand({
     p.intro(pc.bgCyan(pc.black(" cursor-kit init ")));
 
     let target: InstructionTarget;
-    if (args.target === "github-copilot" || args.target === "cursor") {
+    if (args.target === "github-copilot" || args.target === "cursor" || args.target === "google-antigravity") {
       target = args.target;
     } else {
       const selection = await promptTargetSelection();
@@ -448,6 +640,18 @@ export const initCommand = defineCommand({
 
     if (target === "github-copilot") {
       await handleCopilotInstallation(
+        cwd,
+        manifest,
+        args,
+        shouldInitCommands,
+        shouldInitRules,
+        shouldInitSkills
+      );
+      return;
+    }
+
+    if (target === "google-antigravity") {
+      await handleAntiGravityInstallation(
         cwd,
         manifest,
         args,

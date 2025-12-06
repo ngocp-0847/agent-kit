@@ -221,6 +221,114 @@ export function extractFrontmatter(content: string): {
 
   return result;
 }
+/**
+ * Get semantic description keywords for a rule based on filename.
+ * Helps the IDE understand when to apply the rule.
+ */
+function getSemanticDescriptionForRule(filename: string): string {
+  const baseName = filename.replace(/\.(md|mdc)$/, "").toLowerCase();
+  
+  const semanticMap: Record<string, string> = {
+    "toc": "Table of contents, skill routing, rule selection guide, when to apply rules",
+    "git": "Git commit conventions, branching strategy, version control, commit messages",
+    "coding-style": "Code formatting, style guidelines, best practices, clean code",
+  };
+  
+  return semanticMap[baseName] || "";
+}
+
+/**
+ * Transform a Cursor rule to Google AntiGravity rule format.
+ * Converts alwaysApply: true to trigger: always_on
+ * Otherwise uses trigger: model_decision
+ * Adds semantic keywords to description for better IDE understanding
+ */
+export function transformRuleForAntiGravity(content: string, filename: string = ""): string {
+  const frontmatter = extractFrontmatter(content);
+  const body = stripFrontmatter(content);
+  
+  // Determine trigger type based on alwaysApply flag
+  const trigger = frontmatter.alwaysApply === true ? "always_on" : "model_decision";
+  
+  // Build description with semantic keywords
+  const existingDesc = frontmatter.description || frontmatter.name || "";
+  const semanticDesc = getSemanticDescriptionForRule(filename);
+  const description = semanticDesc || existingDesc;
+  
+  // Create AntiGravity frontmatter
+  let newFrontmatter = `---\ntrigger: ${trigger}\n`;
+  if (description) {
+    newFrontmatter += `description: ${description}\n`;
+  }
+  newFrontmatter += "---\n\n";
+  
+  return newFrontmatter + body;
+}
+
+/**
+ * Transform a Cursor command to Google AntiGravity workflow format.
+ * Adds description frontmatter based on the command content.
+ */
+export function transformCommandToWorkflow(content: string, filename: string): string {
+  const frontmatter = extractFrontmatter(content);
+  const body = stripFrontmatter(content);
+  
+  // Use existing description or derive from filename
+  const description = frontmatter.description || 
+    filename.replace(/\.md$/, "").split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  
+  // Create AntiGravity workflow frontmatter
+  const newFrontmatter = `---\ndescription: ${description}\n---\n\n`;
+  
+  return newFrontmatter + body;
+}
+
+/**
+ * Transform SKILL.md content to AntiGravity format.
+ * Uses existing description from frontmatter with trigger: manual
+ */
+export function transformSkillForAntiGravity(content: string): string {
+  const frontmatter = extractFrontmatter(content);
+  const body = stripFrontmatter(content);
+  
+  // Use existing description from SKILL.md metadata
+  const description = frontmatter.description || frontmatter.name || "";
+  
+  // Create AntiGravity skill frontmatter with manual trigger
+  let newFrontmatter = `---\ntrigger: manual\n`;
+  if (description) {
+    newFrontmatter += `description: ${description}\n`;
+  }
+  newFrontmatter += "---\n\n";
+  
+  return newFrontmatter + body;
+}
+
+/**
+ * Copy a local skill to AntiGravity format.
+ * Transforms SKILL.md with proper frontmatter.
+ */
+export function copyLocalSkillForAntiGravity(
+  skillName: string,
+  targetDir: string
+): boolean {
+  const sourcePath = getLocalSkillDir(skillName);
+  if (!sourcePath) return false;
+
+  const destPath = join(targetDir, skillName);
+  ensureDir(destPath);
+  copyDir(sourcePath, destPath);
+
+  // Transform SKILL.md to AntiGravity format
+  const skillMdPath = join(destPath, "SKILL.md");
+  if (fileExists(skillMdPath)) {
+    const content = readFile(skillMdPath);
+    const transformedContent = transformSkillForAntiGravity(content);
+    writeFile(skillMdPath, transformedContent);
+  }
+
+  return true;
+}
 
 export function generateCopilotIndex(
   commands: string[],

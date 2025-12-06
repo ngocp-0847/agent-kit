@@ -133,3 +133,20 @@ export function deleteFile(path: string): void {
     rmSync(path);
   }
 }
+
+// Google AntiGravity directory utilities
+export function getAgentDir(cwd: string = process.cwd()): string {
+  return join(cwd, ".agent");
+}
+
+export function getAgentRulesDir(cwd: string = process.cwd()): string {
+  return join(getAgentDir(cwd), "rules");
+}
+
+export function getAgentWorkflowsDir(cwd: string = process.cwd()): string {
+  return join(getAgentDir(cwd), "workflows");
+}
+
+export function getAgentSkillsDir(cwd: string = process.cwd()): string {
+  return join(getAgentDir(cwd), "skills");
+}
