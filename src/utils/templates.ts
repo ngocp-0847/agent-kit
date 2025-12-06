@@ -1,7 +1,7 @@
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REPO_RAW_URL, TEMPLATE_PATHS } from "./constants";
-import { fileExists, readFile, dirExists, listFiles, listDirs, copyDir, ensureDir } from "./fs";
+import { fileExists, readFile, dirExists, listFiles, listDirs, copyDir, ensureDir, writeFile, deleteFile } from "./fs";
 
 export interface TemplateManifest {
   commands: string[];
@@ -43,7 +43,7 @@ function getLocalManifest(): TemplateManifest | null {
 
   return {
     commands: dirExists(commandsDir) ? listFiles(commandsDir, ".md") : [],
-    rules: dirExists(rulesDir) ? listFiles(rulesDir, ".mdc") : [],
+    rules: dirExists(rulesDir) ? listFiles(rulesDir, ".md") : [],
     skills: dirExists(skillsDir) ? listDirs(skillsDir) : [],
   };
 }
@@ -54,6 +54,14 @@ function getLocalTemplateContent(type: TemplateType, filename: string): string |
 
   if (fileExists(filePath)) {
     return readFile(filePath);
+  }
+
+  // Backward compatibility: try .mdc if .md not found (for rules)
+  if (type === "rules" && filename.endsWith(".md")) {
+    const mdcPath = filePath.replace(/\.md$/, ".mdc");
+    if (fileExists(mdcPath)) {
+      return readFile(mdcPath);
+    }
   }
 
   return null;
@@ -70,13 +78,34 @@ export function getLocalSkillDir(skillName: string): string | null {
   return null;
 }
 
-export function copyLocalSkill(skillName: string, targetDir: string): boolean {
+export function convertMdToMdc(filename: string): string {
+  return filename.replace(/\.md$/, ".mdc");
+}
+
+export function copyLocalSkill(
+  skillName: string,
+  targetDir: string,
+  convertToMdc: boolean = false
+): boolean {
   const sourcePath = getLocalSkillDir(skillName);
   if (!sourcePath) return false;
 
   const destPath = join(targetDir, skillName);
   ensureDir(destPath);
   copyDir(sourcePath, destPath);
+
+  // Convert SKILL.md to SKILL.mdc if needed (for Cursor)
+  if (convertToMdc) {
+    const skillMdPath = join(destPath, "SKILL.md");
+    const skillMdcPath = join(destPath, "SKILL.mdc");
+    if (fileExists(skillMdPath)) {
+      const content = readFile(skillMdPath);
+      writeFile(skillMdcPath, content);
+      // Delete SKILL.md since Cursor only uses SKILL.mdc
+      deleteFile(skillMdPath);
+    }
+  }
+
   return true;
 }
 

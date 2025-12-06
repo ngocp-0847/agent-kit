@@ -11,7 +11,10 @@ import {
   getRulesDir,
   getSkillsDir,
   writeFile,
+  readFile,
+  deleteFile,
 } from "../utils/fs";
+import { convertMdToMdc } from "../utils/templates";
 
 type ItemType = "command" | "rule" | "skill";
 
@@ -182,14 +185,30 @@ export const addCommand = defineCommand({
       displayPath = targetPath;
     } else {
       const targetDir = isCommand ? getCommandsDir() : getRulesDir();
-      const extension = isCommand ? ".md" : ".mdc";
+      // Create as .md, will convert to .mdc for rules after creation
+      const extension = ".md";
       targetPath = join(targetDir, `${slug}${extension}`);
       displayPath = targetPath;
     }
 
-    if (isSkill ? dirExists(targetPath) : fileExists(targetPath)) {
+    // Check for existing files (including .mdc for rules)
+    const checkPath = isSkill 
+      ? targetPath 
+      : isCommand 
+        ? targetPath 
+        : join(getRulesDir(), `${slug}.mdc`);
+    const exists = isSkill 
+      ? dirExists(targetPath) 
+      : fileExists(targetPath) || (!isCommand && fileExists(checkPath));
+    
+    if (exists) {
+      const displayName = isSkill 
+        ? slug 
+        : isCommand 
+          ? `${slug}.md` 
+          : `${slug}.md/.mdc`;
       const shouldOverwrite = await p.confirm({
-        message: `${highlight(isSkill ? slug : slug + (isCommand ? ".md" : ".mdc"))} already exists. Overwrite?`,
+        message: `${highlight(displayName)} already exists. Overwrite?`,
         initialValue: false,
       });
 
@@ -206,13 +225,32 @@ export const addCommand = defineCommand({
       if (isSkill) {
         ensureDir(targetPath);
         ensureDir(join(targetPath, "references"));
-        writeFile(join(targetPath, "SKILL.mdc"), SKILL_TEMPLATE);
+        // Create SKILL.md, then convert to SKILL.mdc for Cursor
+        const skillMdPath = join(targetPath, "SKILL.md");
+        writeFile(skillMdPath, SKILL_TEMPLATE);
         writeFile(join(targetPath, "references", "example.md"), SKILL_REFERENCE_TEMPLATE);
+        
+        // Convert to .mdc for Cursor and delete .md
+        const skillMdcPath = join(targetPath, "SKILL.mdc");
+        const content = readFile(skillMdPath);
+        writeFile(skillMdcPath, content);
+        deleteFile(skillMdPath);
       } else {
         const targetDir = isCommand ? getCommandsDir() : getRulesDir();
         ensureDir(targetDir);
         const template = isCommand ? COMMAND_TEMPLATE : RULE_TEMPLATE;
-        writeFile(targetPath, template);
+        
+        if (isCommand) {
+          // Commands stay as .md
+          writeFile(targetPath, template);
+        } else {
+          // Rules: create as .md, then convert to .mdc for Cursor and delete .md
+          writeFile(targetPath, template);
+          const mdcPath = join(targetDir, convertMdToMdc(`${slug}.md`));
+          const content = readFile(targetPath);
+          writeFile(mdcPath, content);
+          deleteFile(targetPath);
+        }
       }
 
       s.stop(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} created`);
@@ -221,8 +259,12 @@ export const addCommand = defineCommand({
       if (isSkill) {
         console.log(pc.dim("  Directory: ") + highlight(displayPath));
         console.log(pc.dim("  Main file: ") + highlight(join(displayPath, "SKILL.mdc")));
-      } else {
+      } else if (isCommand) {
         console.log(pc.dim("  File: ") + highlight(displayPath));
+      } else {
+        // Rule: show .mdc file (since .md was deleted)
+        const mdcPath = join(getRulesDir(), convertMdToMdc(`${slug}.md`));
+        console.log(pc.dim("  File: ") + highlight(mdcPath));
       }
       console.log();
 

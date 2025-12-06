@@ -65,7 +65,8 @@ async function installCopilotRules(
     const frontmatter = extractFrontmatter(content);
     const cleanContent = stripFrontmatter(content);
 
-    const mdFilename = filename.replace(/\.mdc$/, ".md");
+    // Templates are now .md, but handle .mdc for backward compatibility
+    const mdFilename = filename.endsWith(".md") ? filename : filename.replace(/\.mdc$/, ".md");
     const filePath = join(rulesDir, mdFilename);
     writeFile(filePath, cleanContent);
 
@@ -96,7 +97,14 @@ async function installCopilotSkills(
     const skillMdcPath = join(skillTargetDir, "SKILL.mdc");
     const skillMdPath = join(skillTargetDir, "SKILL.md");
 
-    if (fileExists(skillMdcPath)) {
+    // Handle SKILL.md (new format) or SKILL.mdc (backward compatibility)
+    if (fileExists(skillMdPath)) {
+      // Already .md, just strip frontmatter if needed
+      const content = readFile(skillMdPath);
+      const cleanContent = stripFrontmatter(content);
+      writeFile(skillMdPath, cleanContent);
+    } else if (fileExists(skillMdcPath)) {
+      // Convert .mdc to .md (backward compatibility)
       const content = readFile(skillMdcPath);
       const cleanContent = stripFrontmatter(content);
       writeFile(skillMdPath, cleanContent);

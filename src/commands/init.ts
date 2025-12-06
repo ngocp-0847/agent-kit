@@ -19,6 +19,7 @@ import {
   getTemplateLabel,
   getSkillLabel,
   copyLocalSkill,
+  convertMdToMdc,
   type TemplateManifest,
   type TemplateType,
 } from "../utils/templates";
@@ -255,19 +256,35 @@ async function installTemplates(
   type: TemplateType,
   targetDir: string,
   selectedTemplates: string[],
-  conflictStrategy: ConflictStrategy
+  conflictStrategy: ConflictStrategy,
+  target: InstructionTarget
 ): Promise<InitResult> {
   const result: InitResult = { added: [], skipped: [] };
-  const conflictingFiles = getConflictingFiles(targetDir, selectedTemplates);
+  
+  // For Cursor target, rules need .mdc extension, commands stay .md
+  // For GitHub Copilot, everything stays .md
+  const expectedFilenames = selectedTemplates.map((filename) => {
+    if (target === "cursor" && type === "rules" && filename.endsWith(".md")) {
+      return convertMdToMdc(filename);
+    }
+    return filename;
+  });
+  
+  const conflictingFiles = getConflictingFiles(targetDir, expectedFilenames);
 
   let templatesToInstall: string[];
 
   if (conflictStrategy === "merge") {
     templatesToInstall = selectedTemplates.filter(
-      (t) => !conflictingFiles.includes(t)
+      (t) => {
+        const expectedName = target === "cursor" && type === "rules" && t.endsWith(".md")
+          ? convertMdToMdc(t)
+          : t;
+        return !conflictingFiles.includes(expectedName);
+      }
     );
     result.skipped = conflictingFiles.filter((f) =>
-      selectedTemplates.includes(f)
+      expectedFilenames.includes(f)
     );
   } else {
     templatesToInstall = selectedTemplates;
@@ -282,9 +299,13 @@ async function installTemplates(
   ensureDir(targetDir);
 
   for (const [filename, content] of templates) {
-    const filePath = join(targetDir, filename);
+    // Convert .md to .mdc for rules when target is cursor
+    const outputFilename = target === "cursor" && type === "rules" && filename.endsWith(".md")
+      ? convertMdToMdc(filename)
+      : filename;
+    const filePath = join(targetDir, outputFilename);
     writeFile(filePath, content);
-    result.added.push(filename);
+    result.added.push(outputFilename);
   }
 
   return result;
@@ -293,7 +314,8 @@ async function installTemplates(
 async function installSkills(
   targetDir: string,
   selectedSkills: string[],
-  conflictStrategy: ConflictStrategy
+  conflictStrategy: ConflictStrategy,
+  target: InstructionTarget
 ): Promise<InitResult> {
   const result: InitResult = { added: [], skipped: [] };
   const conflictingDirs = getConflictingDirs(targetDir, selectedSkills);
@@ -317,8 +339,11 @@ async function installSkills(
 
   ensureDir(targetDir);
 
+  // Convert SKILL.md to SKILL.mdc for Cursor target
+  const convertToMdc = target === "cursor";
+
   for (const skillName of skillsToInstall) {
-    const success = copyLocalSkill(skillName, targetDir);
+    const success = copyLocalSkill(skillName, targetDir, convertToMdc);
     if (success) {
       result.added.push(skillName);
     }
@@ -468,7 +493,8 @@ export const initCommand = defineCommand({
           "commands",
           commandsDir,
           selectedCommands,
-          commandStrategy
+          commandStrategy,
+          target
         );
         s.stop("Commands installed");
       }
@@ -487,7 +513,13 @@ export const initCommand = defineCommand({
           selectedRules = selection;
         }
 
-        const conflictingRules = getConflictingFiles(rulesDir, selectedRules);
+        // For Cursor, rules need .mdc extension, so check for .mdc files
+        const expectedRuleFilenames = selectedRules.map((filename) => {
+          return target === "cursor" && filename.endsWith(".md")
+            ? convertMdToMdc(filename)
+            : filename;
+        });
+        const conflictingRules = getConflictingFiles(rulesDir, expectedRuleFilenames);
         let ruleStrategy: ConflictStrategy = "overwrite";
 
         if (conflictingRules.length > 0 && !args.force) {
@@ -504,7 +536,8 @@ export const initCommand = defineCommand({
           "rules",
           rulesDir,
           selectedRules,
-          ruleStrategy
+          ruleStrategy,
+          target
         );
         s.stop("Rules installed");
       }
@@ -539,7 +572,8 @@ export const initCommand = defineCommand({
         results.skills = await installSkills(
           skillsDir,
           selectedSkills,
-          skillStrategy
+          skillStrategy,
+          target
         );
         s.stop("Skills installed");
       }

@@ -9,9 +9,9 @@
     "test.md"
   ],
   "rules": [
-    "coding-style.mdc",
-    "git.mdc",
-    "toc.mdc"
+    "coding-style.md",
+    "git.md",
+    "toc.md"
   ],
   "skills": [
     "aesthetic",
