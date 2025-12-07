@@ -1,57 +1,92 @@
-import type { JSX, ParentComponent } from "solid-js";
-import { splitProps } from "solid-js";
+import * as React from "react"
 
-export interface CardProps extends JSX.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "elevated" | "glow";
-  hover?: boolean;
-}
+import { cn } from "@/lib/utils"
 
-const variantStyles = {
-  default: "bg-[var(--bg-card)] border border-[var(--border-primary)]",
-  elevated: "bg-[var(--surface-elevated)] border border-[var(--border-primary)] shadow-xl",
-  glow: "bg-[var(--bg-card)] border border-[var(--border-primary)] glow-primary",
-};
-
-export const Card: ParentComponent<CardProps> = (props) => {
-  const [local, rest] = splitProps(props, ["variant", "hover", "class", "children"]);
-
-  const variant = () => local.variant ?? "default";
-  const hoverStyles = () =>
-    local.hover
-      ? "hover:border-[var(--border-hover)] hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300"
-      : "";
-
+function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      class={`
-        rounded-xl overflow-hidden
-        ${variantStyles[variant()]}
-        ${hoverStyles()}
-        ${local.class ?? ""}
-      `}
-      {...rest}
-    >
-      {local.children}
-    </div>
-  );
-};
+      data-slot="card"
+      className={cn(
+        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        className
+      )}
+      {...props}
+    />
+  )
+}
 
-export const CardHeader: ParentComponent<JSX.HTMLAttributes<HTMLDivElement>> = (props) => {
-  const [local, rest] = splitProps(props, ["class", "children"]);
-
+function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div class={`p-6 pb-0 ${local.class ?? ""}`} {...rest}>
-      {local.children}
-    </div>
-  );
-};
+    <div
+      data-slot="card-header"
+      className={cn(
+        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+        className
+      )}
+      {...props}
+    />
+  )
+}
 
-export const CardContent: ParentComponent<JSX.HTMLAttributes<HTMLDivElement>> = (props) => {
-  const [local, rest] = splitProps(props, ["class", "children"]);
-
+function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div class={`p-6 ${local.class ?? ""}`} {...rest}>
-      {local.children}
-    </div>
-  );
-};
+    <div
+      data-slot="card-title"
+      className={cn("leading-none font-semibold", className)}
+      {...props}
+    />
+  )
+}
+
+function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-description"
+      className={cn("text-muted-foreground text-sm", className)}
+      {...props}
+    />
+  )
+}
+
+function CardAction({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-action"
+      className={cn(
+        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-content"
+      className={cn("px-6", className)}
+      {...props}
+    />
+  )
+}
+
+function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-footer"
+      className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardAction,
+  CardDescription,
+  CardContent,
+}

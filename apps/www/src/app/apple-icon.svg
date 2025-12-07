@@ -1,0 +1,33 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="triangleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="50%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#F97316" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="#0F172A" />
+
+  <!-- Rounded triangle shape (centered) -->
+  <g transform="translate(40, 35)">
+    <path
+      d="M50 8C52.5 8 54.8 9.3 56.2 11.5L89.5 68.5C91 71 91.2 74 89.8 76.7C88.4 79.4 85.7 81 82.8 81H17.2C14.3 81 11.6 79.4 10.2 76.7C8.8 74 9 71 10.5 68.5L43.8 11.5C45.2 9.3 47.5 8 50 8Z"
+      fill="url(#triangleGradient)"
+    />
+
+    <!-- Fingerprint pattern -->
+    <g stroke="#1E293B" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.9">
+      <path d="M50 28L50 32" />
+      <path d="M42 36C42 31 46 28 50 28C54 28 58 31 58 36" />
+      <path d="M38 42C38 33 43 26 50 26C57 26 62 33 62 42" />
+      <path d="M34 48C34 36 40 27 50 27C60 27 66 36 66 48" />
+      <path d="M30 55C30 39 38 28 50 28C62 28 70 39 70 55" />
+      <path d="M26 62C26 42 36 30 50 30C64 30 74 42 74 62" />
+      <path d="M30 68C28 55 35 42 50 42C65 42 72 55 70 68" />
+      <path d="M35 72C34 62 40 52 50 52C60 52 66 62 65 72" />
+      <path d="M40 74C40 67 44 60 50 60C56 60 60 67 60 74" />
+    </g>
+  </g>
+</svg>
