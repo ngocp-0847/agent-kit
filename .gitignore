@@ -38,3 +38,13 @@ pnpm-lock.yaml
 
 
 .pnpm-store
+
+# Google AntiGravity
+.agent/
+
+# Cursor
+.cursor/
+
+# Github Copilot
+.github/copilot-instructions.md
+.github/copilot-instructions/
