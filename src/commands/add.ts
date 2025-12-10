@@ -2,18 +2,22 @@ import * as p from "@clack/prompts";
 import { defineCommand } from "citty";
 import { join } from "node:path";
 import pc from "picocolors";
+import type { InstructionTarget } from "../types/init";
 import { highlight } from "../utils/branding";
 import {
   dirExists,
   ensureDir,
   fileExists,
-  getCommandsDir,
-  getRulesDir,
-  getSkillsDir,
   writeFile,
   readFile,
   deleteFile,
 } from "../utils/fs";
+import {
+  promptTargetSelection,
+  isValidTarget,
+  getTargetDirectories,
+  getTargetConfig,
+} from "../utils/target";
 import { convertMdToMdc } from "../utils/templates";
 
 type ItemType = "command" | "rule" | "skill";
@@ -111,9 +115,28 @@ export const addCommand = defineCommand({
       alias: "n",
       description: "Name of the command, rule, or skill",
     },
+    target: {
+      type: "string",
+      description: "Target IDE: 'cursor', 'github-copilot', or 'google-antigravity'",
+    },
   },
   async run({ args }) {
     p.intro(pc.bgCyan(pc.black(" cursor-kit add ")));
+
+    let target: InstructionTarget;
+    if (isValidTarget(args.target)) {
+      target = args.target;
+    } else {
+      const selection = await promptTargetSelection();
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      target = selection;
+    }
+
+    const targetConfig = getTargetConfig(target);
+    const directories = getTargetDirectories(target);
 
     let itemType: ItemType;
     let itemName: string;
@@ -126,8 +149,8 @@ export const addCommand = defineCommand({
         options: [
           {
             value: "command",
-            label: "Command",
-            hint: "A reusable prompt template",
+            label: target === "google-antigravity" ? "Workflow" : "Command",
+            hint: target === "google-antigravity" ? "A workflow template" : "A reusable prompt template",
           },
           {
             value: "rule",
@@ -150,11 +173,13 @@ export const addCommand = defineCommand({
       itemType = typeResult as ItemType;
     }
 
+    const itemLabel = itemType === "command" ? targetConfig.commandsLabel : itemType;
+
     if (args.name) {
       itemName = args.name;
     } else {
       const nameResult = await p.text({
-        message: `Enter ${itemType} name:`,
+        message: `Enter ${itemLabel} name:`,
         placeholder: itemType === "command" ? "my-command" : itemType === "rule" ? "my-rule" : "my-skill",
         validate: (value) => {
           if (!value.trim()) return "Name is required";
@@ -173,40 +198,44 @@ export const addCommand = defineCommand({
 
     const slug = generateSlug(itemName);
     const isCommand = itemType === "command";
-    // const isRule = itemType === "rule";
     const isSkill = itemType === "skill";
+    const isRule = itemType === "rule";
 
     let targetPath: string;
     let displayPath: string;
 
     if (isSkill) {
-      const skillsDir = getSkillsDir();
-      targetPath = join(skillsDir, slug);
+      targetPath = join(directories.skillsDir, slug);
       displayPath = targetPath;
     } else {
-      const targetDir = isCommand ? getCommandsDir() : getRulesDir();
-      // Create as .md, will convert to .mdc for rules after creation
+      const targetDir = isCommand ? directories.commandsDir : directories.rulesDir;
       const extension = ".md";
       targetPath = join(targetDir, `${slug}${extension}`);
       displayPath = targetPath;
     }
 
-    // Check for existing files (including .mdc for rules)
-    const checkPath = isSkill 
-      ? targetPath 
-      : isCommand 
-        ? targetPath 
-        : join(getRulesDir(), `${slug}.mdc`);
-    const exists = isSkill 
-      ? dirExists(targetPath) 
+    const getExpectedExtension = (): string => {
+      if (isSkill) return "";
+      if (isCommand) return targetConfig.commandsExtension;
+      return targetConfig.rulesExtension;
+    };
+
+    const checkPath = isSkill
+      ? targetPath
+      : isCommand
+        ? targetPath
+        : join(directories.rulesDir, `${slug}${getExpectedExtension()}`);
+
+    const exists = isSkill
+      ? dirExists(targetPath)
       : fileExists(targetPath) || (!isCommand && fileExists(checkPath));
-    
+
     if (exists) {
-      const displayName = isSkill 
-        ? slug 
-        : isCommand 
-          ? `${slug}.md` 
-          : `${slug}.md/.mdc`;
+      const displayName = isSkill
+        ? slug
+        : isCommand
+          ? `${slug}.md`
+          : `${slug}${getExpectedExtension()}`;
       const shouldOverwrite = await p.confirm({
         message: `${highlight(displayName)} already exists. Overwrite?`,
         initialValue: false,
@@ -219,57 +248,60 @@ export const addCommand = defineCommand({
     }
 
     const s = p.spinner();
-    s.start(`Creating ${itemType}...`);
+    s.start(`Creating ${itemLabel}...`);
 
     try {
       if (isSkill) {
         ensureDir(targetPath);
         ensureDir(join(targetPath, "references"));
-        // Create SKILL.md, then convert to SKILL.mdc for Cursor
         const skillMdPath = join(targetPath, "SKILL.md");
         writeFile(skillMdPath, SKILL_TEMPLATE);
         writeFile(join(targetPath, "references", "example.md"), SKILL_REFERENCE_TEMPLATE);
-        
-        // Convert to .mdc for Cursor and delete .md
-        const skillMdcPath = join(targetPath, "SKILL.mdc");
-        const content = readFile(skillMdPath);
-        writeFile(skillMdcPath, content);
-        deleteFile(skillMdPath);
+
+        if (target === "cursor") {
+          const skillMdcPath = join(targetPath, "SKILL.mdc");
+          const content = readFile(skillMdPath);
+          writeFile(skillMdcPath, content);
+          deleteFile(skillMdPath);
+        }
       } else {
-        const targetDir = isCommand ? getCommandsDir() : getRulesDir();
+        const targetDir = isCommand ? directories.commandsDir : directories.rulesDir;
         ensureDir(targetDir);
         const template = isCommand ? COMMAND_TEMPLATE : RULE_TEMPLATE;
-        
+
         if (isCommand) {
-          // Commands stay as .md
           writeFile(targetPath, template);
-        } else {
-          // Rules: create as .md, then convert to .mdc for Cursor and delete .md
+        } else if (isRule) {
           writeFile(targetPath, template);
-          const mdcPath = join(targetDir, convertMdToMdc(`${slug}.md`));
-          const content = readFile(targetPath);
-          writeFile(mdcPath, content);
-          deleteFile(targetPath);
+          if (target === "cursor") {
+            const mdcPath = join(targetDir, convertMdToMdc(`${slug}.md`));
+            const content = readFile(targetPath);
+            writeFile(mdcPath, content);
+            deleteFile(targetPath);
+          }
         }
       }
 
-      s.stop(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} created`);
+      s.stop(`${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} created`);
 
       console.log();
+      console.log(pc.dim("  Target: ") + highlight(targetConfig.label));
       if (isSkill) {
         console.log(pc.dim("  Directory: ") + highlight(displayPath));
-        console.log(pc.dim("  Main file: ") + highlight(join(displayPath, "SKILL.mdc")));
+        const skillFileName = target === "cursor" ? "SKILL.mdc" : "SKILL.md";
+        console.log(pc.dim("  Main file: ") + highlight(join(displayPath, skillFileName)));
       } else if (isCommand) {
         console.log(pc.dim("  File: ") + highlight(displayPath));
       } else {
-        // Rule: show .mdc file (since .md was deleted)
-        const mdcPath = join(getRulesDir(), convertMdToMdc(`${slug}.md`));
-        console.log(pc.dim("  File: ") + highlight(mdcPath));
+        const finalPath = target === "cursor"
+          ? join(directories.rulesDir, convertMdToMdc(`${slug}.md`))
+          : targetPath;
+        console.log(pc.dim("  File: ") + highlight(finalPath));
       }
       console.log();
 
       p.outro(
-        pc.green(`✨ ${itemType.charAt(0).toUpperCase() + itemType.slice(1)} created! Edit the file to customize it.`)
+        pc.green(`✨ ${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} created! Edit the file to customize it.`)
       );
     } catch (error) {
       s.stop("Failed");

@@ -1,10 +1,9 @@
 import { defineCommand } from "citty";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
+import { join } from "node:path";
+import type { InstructionTarget } from "../types/init";
 import {
-  getCommandsDir,
-  getRulesDir,
-  getSkillsDir,
   listFiles,
   listDirs,
   removeFile,
@@ -12,7 +11,12 @@ import {
   dirExists,
 } from "../utils/fs";
 import { highlight, printSuccess } from "../utils/branding";
-import { join } from "node:path";
+import {
+  promptTargetSelection,
+  isValidTarget,
+  getTargetDirectories,
+  getTargetConfig,
+} from "../utils/target";
 
 type ItemType = "command" | "rule" | "skill";
 
@@ -44,21 +48,41 @@ export const removeCommand = defineCommand({
       description: "Skip confirmation",
       default: false,
     },
+    target: {
+      type: "string",
+      description: "Target IDE: 'cursor', 'github-copilot', or 'google-antigravity'",
+    },
   },
   async run({ args }) {
     p.intro(pc.bgCyan(pc.black(" cursor-kit remove ")));
 
-    const commandsDir = getCommandsDir();
-    const rulesDir = getRulesDir();
-    const skillsDir = getSkillsDir();
+    let target: InstructionTarget;
+    if (isValidTarget(args.target)) {
+      target = args.target;
+    } else {
+      const selection = await promptTargetSelection();
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      target = selection;
+    }
 
+    const targetConfig = getTargetConfig(target);
+    const directories = getTargetDirectories(target);
+    const { commandsDir, rulesDir, skillsDir } = directories;
+
+    const rulesExtension = targetConfig.rulesExtension;
     const commands = listFiles(commandsDir, ".md").map((f) => f.replace(".md", ""));
-    const rules = listFiles(rulesDir, ".mdc").map((f) => f.replace(".mdc", ""));
+    const rules = listFiles(rulesDir, rulesExtension).map((f) => f.replace(rulesExtension, ""));
     const skills = listDirs(skillsDir);
+
+    console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
+    console.log();
 
     if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
       console.log();
-      console.log(pc.yellow("  No commands, rules, or skills to remove."));
+      console.log(pc.yellow(`  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, or skills to remove.`));
       console.log();
       p.outro(pc.dim("Nothing to do"));
       return;
@@ -75,7 +99,7 @@ export const removeCommand = defineCommand({
       if (commands.length > 0) {
         typeOptions.push({
           value: "command",
-          label: "Command",
+          label: target === "google-antigravity" ? "Workflow" : "Command",
           hint: `${commands.length} available`,
         });
       }
@@ -114,10 +138,11 @@ export const removeCommand = defineCommand({
     const isSkill = itemType === "skill";
     const items = isCommand ? commands : isRule ? rules : skills;
     const dir = isCommand ? commandsDir : isRule ? rulesDir : skillsDir;
-    const extension = isCommand ? ".md" : isRule ? ".mdc" : "";
+    const extension = isCommand ? ".md" : isRule ? rulesExtension : "";
+    const itemLabel = isCommand ? targetConfig.commandsLabel : itemType;
 
     if (items.length === 0) {
-      p.cancel(`No ${itemType}s found`);
+      p.cancel(`No ${itemLabel}s found`);
       process.exit(0);
     }
 
@@ -130,7 +155,7 @@ export const removeCommand = defineCommand({
       }));
 
       const nameResult = await p.select({
-        message: `Select ${itemType} to remove:`,
+        message: `Select ${itemLabel} to remove:`,
         options: itemOptions,
       });
 
@@ -149,7 +174,7 @@ export const removeCommand = defineCommand({
     const exists = isSkill ? dirExists(targetPath) : fileExists(targetPath);
 
     if (!exists) {
-      p.cancel(`${itemType} '${itemName}' not found`);
+      p.cancel(`${itemLabel} '${itemName}' not found`);
       process.exit(1);
     }
 
@@ -170,7 +195,7 @@ export const removeCommand = defineCommand({
       removeFile(targetPath);
       const displayName = isSkill ? itemName : itemName + extension;
       console.log();
-      printSuccess(`Removed ${highlight(displayName)}`);
+      printSuccess(`Removed ${highlight(displayName)} from ${targetConfig.label}`);
       console.log();
       p.outro(pc.green("✨ Done!"));
     } catch (error) {

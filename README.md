@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Supercharge your AI IDE with rules & commands</b><br/>
-  <sub>A CLI toolkit to manage, share, and sync Cursor IDE and GitHub Copilot configurations</sub>
+  <sub>A CLI toolkit to manage, share, and sync Cursor IDE, GitHub Copilot, and Google AntiGravity configurations</sub>
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@ ck init
 - **📋 Rules** - Project-specific AI behavior guidelines
 - **🎓 Skills** - Comprehensive guides with references for specialized domains
 - **🔄 Sync** - Keep configurations updated from the community
-- **🎯 Multi-Target** - Support for both Cursor IDE and GitHub Copilot
+- **🎯 Multi-Target** - Support for Cursor IDE, GitHub Copilot, and Google AntiGravity
 - **🖥️ Multi-Instance** - Run multiple Cursor accounts simultaneously (macOS)
 - **🎨 Beautiful CLI** - Delightful terminal experience
 
@@ -52,45 +52,55 @@ ck init
 
 ### `init`
 
-Initialize `.cursor/commands`, `.cursor/rules`, and `.cursor/skills` in your project with curated templates. Supports both Cursor IDE and GitHub Copilot.
+Initialize commands, rules, and skills in your project with curated templates. Supports Cursor IDE, GitHub Copilot, and Google AntiGravity.
 
 ```bash
-cursor-kit init                    # Interactive: choose Cursor or GitHub Copilot
-cursor-kit init -t cursor          # Initialize for Cursor IDE (.cursor/)
-cursor-kit init -t github-copilot  # Initialize for GitHub Copilot (.github/copilot-instructions/)
-cursor-kit init -c                 # Only initialize commands
-cursor-kit init -r                 # Only initialize rules
-cursor-kit init -s                 # Only initialize skills
-cursor-kit init -f                 # Force overwrite existing files
-cursor-kit init -a                 # Install all templates without selection prompts
+cursor-kit init                       # Interactive: choose target IDE
+cursor-kit init -t cursor             # Initialize for Cursor IDE (.cursor/)
+cursor-kit init -t github-copilot     # Initialize for GitHub Copilot (.github/copilot-instructions/)
+cursor-kit init -t google-antigravity # Initialize for Google AntiGravity (.agent/)
+cursor-kit init -c                    # Only initialize commands
+cursor-kit init -r                    # Only initialize rules
+cursor-kit init -s                    # Only initialize skills
+cursor-kit init -f                    # Force overwrite existing files
+cursor-kit init -a                    # Install all templates without selection prompts
 ```
 
 **Target options:**
 - `cursor` (default) - Creates `.cursor/` directory structure for Cursor IDE
 - `github-copilot` - Creates `.github/copilot-instructions.md` and related structure for GitHub Copilot
+- `google-antigravity` - Creates `.agent/` directory with rules, workflows, and skills for Google AntiGravity
 
 ### `add`
 
-Interactively create a new command, rule, or skill with a starter template.
+Interactively create a new command, rule, or skill with a starter template. Supports targeting different AI IDEs.
 
 ```bash
-cursor-kit add                    # Interactive mode
-cursor-kit add -t command         # Add a command
-cursor-kit add -t rule            # Add a rule
-cursor-kit add -t skill           # Add a skill
-cursor-kit add -t command -n my-command  # Quick create
+cursor-kit add                              # Interactive mode (prompts for target)
+cursor-kit add --target cursor              # Add to Cursor IDE
+cursor-kit add --target github-copilot      # Add to GitHub Copilot
+cursor-kit add --target google-antigravity  # Add to Google AntiGravity
+cursor-kit add -t command                   # Add a command
+cursor-kit add -t rule                      # Add a rule
+cursor-kit add -t skill                     # Add a skill
+cursor-kit add -t command -n my-command     # Quick create
+cursor-kit add --target cursor -t rule -n my-rule  # Full example
 ```
 
 ### `pull`
 
-Fetch the latest updates from the cursor-kit repository.
+Fetch the latest updates from the cursor-kit repository. Supports targeting different AI IDEs.
 
 ```bash
-cursor-kit pull           # Pull commands, rules, and skills
-cursor-kit pull -c        # Only pull commands
-cursor-kit pull -r        # Only pull rules
-cursor-kit pull -s        # Only pull skills
-cursor-kit pull -f        # Force overwrite without confirmation
+cursor-kit pull                         # Interactive mode (prompts for target)
+cursor-kit pull -t cursor               # Pull to Cursor IDE
+cursor-kit pull -t github-copilot       # Pull to GitHub Copilot
+cursor-kit pull -t google-antigravity   # Pull to Google AntiGravity
+cursor-kit pull -c                      # Only pull commands
+cursor-kit pull -r                      # Only pull rules
+cursor-kit pull -s                      # Only pull skills
+cursor-kit pull -f                      # Force overwrite without confirmation
+cursor-kit pull -t cursor -r -f         # Pull rules to Cursor with force
 ```
 
 ### `list`
@@ -107,12 +117,16 @@ cursor-kit list -v        # Verbose mode with file paths
 
 ### `remove`
 
-Remove a command, rule, or skill from your project.
+Remove a command, rule, or skill from your project. Supports targeting different AI IDEs.
 
 ```bash
-cursor-kit remove         # Interactive mode
-cursor-kit remove -t command -n my-command   # Quick remove
-cursor-kit remove -f      # Skip confirmation
+cursor-kit remove                        # Interactive mode (prompts for target)
+cursor-kit remove --target cursor        # Remove from Cursor IDE
+cursor-kit remove --target github-copilot       # Remove from GitHub Copilot
+cursor-kit remove --target google-antigravity   # Remove from Google AntiGravity
+cursor-kit remove -t command -n my-command      # Quick remove
+cursor-kit remove -f                     # Skip confirmation
+cursor-kit remove --target cursor -t rule -n my-rule -f  # Full example
 ```
 
 ### `instance`
@@ -234,6 +248,34 @@ your-project/
             │   ├── SKILL.md
             │   └── references/
             └── ... (other skills)
+```
+
+### Google AntiGravity
+
+```
+your-project/
+└── .agent/
+    ├── workflows/                 # Workflow templates (.md)
+    │   ├── docs.md
+    │   ├── explain.md
+    │   ├── fix.md
+    │   ├── implement.md
+    │   ├── refactor.md
+    │   ├── review.md
+    │   └── test.md
+    ├── rules/                     # AI behavior rules (.md)
+    │   ├── coding-style.md
+    │   ├── git.md
+    │   └── toc.md
+    └── skills/                    # Comprehensive guides with references
+        ├── aesthetic/
+        │   ├── SKILL.md
+        │   ├── assets/
+        │   └── references/
+        ├── backend-development/
+        │   ├── SKILL.md
+        │   └── references/
+        └── ... (other skills)
 ```
 
 ## 🎯 Included Templates

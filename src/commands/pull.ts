@@ -2,17 +2,87 @@ import { defineCommand } from "citty";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { downloadTemplate } from "giget";
+import { join } from "node:path";
+import type { InstructionTarget } from "../types/init";
 import {
   ensureDir,
-  getCommandsDir,
-  getRulesDir,
-  getSkillsDir,
   listFiles,
   listDirs,
-  getCursorDir,
+  writeFile,
+  readFile,
 } from "../utils/fs";
 import { REPO_URL, REPO_REF } from "../utils/constants";
 import { highlight, printDivider, printSuccess, printInfo } from "../utils/branding";
+import {
+  promptTargetSelection,
+  isValidTarget,
+  getTargetDirectories,
+  getTargetConfig,
+} from "../utils/target";
+import {
+  convertMdToMdc,
+  transformTocContentForCursor,
+  transformRuleForAntiGravity,
+  transformCommandToWorkflow,
+} from "../utils/templates";
+
+async function convertPulledFilesForTarget(
+  target: InstructionTarget,
+  directories: ReturnType<typeof getTargetDirectories>
+): Promise<void> {
+  const { commandsDir, rulesDir, skillsDir } = directories;
+
+  if (target === "cursor") {
+    const ruleFiles = listFiles(rulesDir, ".md");
+    for (const file of ruleFiles) {
+      const sourcePath = join(rulesDir, file);
+      const content = readFile(sourcePath);
+      const mdcFilename = convertMdToMdc(file);
+      const destPath = join(rulesDir, mdcFilename);
+
+      let transformedContent = content;
+      if (file === "toc.md") {
+        transformedContent = transformTocContentForCursor(content);
+      }
+
+      writeFile(destPath, transformedContent);
+
+      const { rmSync } = await import("node:fs");
+      rmSync(sourcePath);
+    }
+
+    const skillDirs = listDirs(skillsDir);
+    for (const skillDir of skillDirs) {
+      const skillPath = join(skillsDir, skillDir);
+      const skillMdPath = join(skillPath, "SKILL.md");
+      const skillMdcPath = join(skillPath, "SKILL.mdc");
+
+      const { existsSync } = await import("node:fs");
+      if (existsSync(skillMdPath)) {
+        const content = readFile(skillMdPath);
+        writeFile(skillMdcPath, content);
+        const { rmSync } = await import("node:fs");
+        rmSync(skillMdPath);
+      }
+    }
+  } else if (target === "google-antigravity") {
+    const ruleFiles = listFiles(rulesDir, ".md");
+    for (const file of ruleFiles) {
+      const sourcePath = join(rulesDir, file);
+      const content = readFile(sourcePath);
+      const transformedContent = transformRuleForAntiGravity(content, file);
+      writeFile(sourcePath, transformedContent);
+    }
+
+    const commandFiles = listFiles(commandsDir, ".md");
+    for (const file of commandFiles) {
+      const sourcePath = join(commandsDir, file);
+      const content = readFile(sourcePath);
+      const transformedContent = transformCommandToWorkflow(content, file);
+      writeFile(sourcePath, transformedContent);
+    }
+  }
+}
 
 export const pullCommand = defineCommand({
   meta: {
@@ -44,6 +114,11 @@ export const pullCommand = defineCommand({
       description: "Force overwrite without confirmation",
       default: false,
     },
+    target: {
+      type: "string",
+      alias: "t",
+      description: "Target IDE: 'cursor', 'github-copilot', or 'google-antigravity'",
+    },
   },
   async run({ args }) {
     const pullAll = !args.commands && !args.rules && !args.skills;
@@ -53,22 +128,38 @@ export const pullCommand = defineCommand({
 
     p.intro(pc.bgCyan(pc.black(" cursor-kit pull ")));
 
-    const commandsDir = getCommandsDir();
-    const rulesDir = getRulesDir();
-    const skillsDir = getSkillsDir();
+    let target: InstructionTarget;
+    if (isValidTarget(args.target)) {
+      target = args.target;
+    } else {
+      const selection = await promptTargetSelection();
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      target = selection;
+    }
 
+    const targetConfig = getTargetConfig(target);
+    const directories = getTargetDirectories(target);
+    const { rootDir, commandsDir, rulesDir, skillsDir } = directories;
+
+    const rulesExtension = target === "cursor" ? ".mdc" : ".md";
     const existingCommands = listFiles(commandsDir, ".md");
-    const existingRules = listFiles(rulesDir, ".mdc");
+    const existingRules = listFiles(rulesDir, rulesExtension);
     const existingSkills = listDirs(skillsDir);
     const hasExisting = existingCommands.length > 0 || existingRules.length > 0 || existingSkills.length > 0;
+
+    console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
+    console.log();
 
     if (hasExisting && !args.force) {
       printInfo("Current status:");
       if (existingCommands.length > 0) {
-        console.log(pc.dim(`  Commands: ${existingCommands.length} files`));
+        console.log(pc.dim(`  ${targetConfig.commandsLabel}: ${existingCommands.length} files`));
       }
       if (existingRules.length > 0) {
-        console.log(pc.dim(`  Rules: ${existingRules.length} files`));
+        console.log(pc.dim(`  ${targetConfig.rulesLabel}: ${existingRules.length} files`));
       }
       if (existingSkills.length > 0) {
         console.log(pc.dim(`  Skills: ${existingSkills.length} directories`));
@@ -89,24 +180,24 @@ export const pullCommand = defineCommand({
     const s = p.spinner();
 
     try {
-      ensureDir(getCursorDir());
+      ensureDir(rootDir);
 
       if (shouldPullCommands) {
-        s.start("Pulling commands...");
+        s.start(`Pulling ${targetConfig.commandsLabel}...`);
         await downloadTemplate(`${REPO_URL}/templates/commands#${REPO_REF}`, {
           dir: commandsDir,
           force: true,
         });
-        s.stop("Commands updated");
+        s.stop(`${targetConfig.commandsLabel.charAt(0).toUpperCase() + targetConfig.commandsLabel.slice(1)} updated`);
       }
 
       if (shouldPullRules) {
-        s.start("Pulling rules...");
+        s.start(`Pulling ${targetConfig.rulesLabel}...`);
         await downloadTemplate(`${REPO_URL}/templates/rules#${REPO_REF}`, {
           dir: rulesDir,
           force: true,
         });
-        s.stop("Rules updated");
+        s.stop(`${targetConfig.rulesLabel.charAt(0).toUpperCase() + targetConfig.rulesLabel.slice(1)} updated`);
       }
 
       if (shouldPullSkills) {
@@ -118,17 +209,24 @@ export const pullCommand = defineCommand({
         s.stop("Skills updated");
       }
 
+      if (target !== "github-copilot") {
+        s.start("Converting files for target...");
+        await convertPulledFilesForTarget(target, directories);
+        s.stop("Files converted");
+      }
+
       printDivider();
       console.log();
 
+      const newRulesExtension = target === "cursor" ? ".mdc" : ".md";
       const newCommands = listFiles(commandsDir, ".md");
-      const newRules = listFiles(rulesDir, ".mdc");
+      const newRules = listFiles(rulesDir, newRulesExtension);
       const newSkills = listDirs(skillsDir);
 
       if (shouldPullCommands) {
         const added = newCommands.length - existingCommands.length;
         printSuccess(
-          `Commands: ${highlight(newCommands.length.toString())} total` +
+          `${targetConfig.commandsLabel.charAt(0).toUpperCase() + targetConfig.commandsLabel.slice(1)}: ${highlight(newCommands.length.toString())} total` +
             (added > 0 ? pc.green(` (+${added} new)`) : "")
         );
       }
@@ -136,7 +234,7 @@ export const pullCommand = defineCommand({
       if (shouldPullRules) {
         const added = newRules.length - existingRules.length;
         printSuccess(
-          `Rules: ${highlight(newRules.length.toString())} total` +
+          `${targetConfig.rulesLabel.charAt(0).toUpperCase() + targetConfig.rulesLabel.slice(1)}: ${highlight(newRules.length.toString())} total` +
             (added > 0 ? pc.green(` (+${added} new)`) : "")
         );
       }
@@ -150,7 +248,7 @@ export const pullCommand = defineCommand({
       }
 
       console.log();
-      p.outro(pc.green("✨ Successfully pulled latest updates!"));
+      p.outro(pc.green(`✨ Successfully pulled latest updates for ${targetConfig.label}!`));
     } catch (error) {
       s.stop("Failed");
       p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
