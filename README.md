@@ -1,8 +1,5 @@
-<p align="center">
-  <img src="./thumbnail.png" alt="Agent Kit" width="768" />
-</p>
 
-<h1 align="center">✦ Agent Kit ✦</h1>
+# ✦ Agent Kit ✦
 
 <p align="center">
   <b>Supercharge your AI coding agents with rules & commands</b><br/>
