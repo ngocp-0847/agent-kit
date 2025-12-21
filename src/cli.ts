@@ -1,12 +1,11 @@
-import { defineCommand, runMain } from "citty";
 import { createRequire } from "node:module";
-import { printBanner, printVersion } from "./utils/branding";
-import { initCommand } from "./commands/init";
+import { defineCommand, runMain } from "citty";
 import { addCommand } from "./commands/add";
-import { pullCommand } from "./commands/pull";
+import { initCommand } from "./commands/init";
 import { listCommand } from "./commands/list";
+import { pullCommand } from "./commands/pull";
 import { removeCommand } from "./commands/remove";
-import { instanceCommand } from "./commands/instance";
+import { printBanner, printVersion } from "./utils/branding";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };
@@ -27,9 +26,7 @@ const main = defineCommand({
     pull: pullCommand,
     list: listCommand,
     remove: removeCommand,
-    instance: instanceCommand,
   },
 });
 
 runMain(main);
-

@@ -1,34 +1,28 @@
-import { defineCommand } from "citty";
-import * as p from "@clack/prompts";
-import pc from "picocolors";
-import { downloadTemplate } from "giget";
 import { join } from "node:path";
+import * as p from "@clack/prompts";
+import { defineCommand } from "citty";
+import { downloadTemplate } from "giget";
+import pc from "picocolors";
 import type { InstructionTarget } from "../types/init";
+import { highlight, printDivider, printInfo, printSuccess } from "../utils/branding";
+import { REPO_REF, REPO_URL } from "../utils/constants";
+import { ensureDir, listDirs, listFiles, readFile, writeFile } from "../utils/fs";
 import {
-  ensureDir,
-  listFiles,
-  listDirs,
-  writeFile,
-  readFile,
-} from "../utils/fs";
-import { REPO_URL, REPO_REF } from "../utils/constants";
-import { highlight, printDivider, printSuccess, printInfo } from "../utils/branding";
-import {
-  promptTargetSelection,
-  isValidTarget,
-  getTargetDirectories,
   getTargetConfig,
+  getTargetDirectories,
+  isValidTarget,
+  promptTargetSelection,
 } from "../utils/target";
 import {
   convertMdToMdc,
-  transformTocContentForCursor,
-  transformRuleForAntiGravity,
   transformCommandToWorkflow,
+  transformRuleForAntiGravity,
+  transformTocContentForCursor,
 } from "../utils/templates";
 
 async function convertPulledFilesForTarget(
   target: InstructionTarget,
-  directories: ReturnType<typeof getTargetDirectories>
+  directories: ReturnType<typeof getTargetDirectories>,
 ): Promise<void> {
   const { commandsDir, rulesDir, skillsDir } = directories;
 
@@ -148,7 +142,8 @@ export const pullCommand = defineCommand({
     const existingCommands = listFiles(commandsDir, ".md");
     const existingRules = listFiles(rulesDir, rulesExtension);
     const existingSkills = listDirs(skillsDir);
-    const hasExisting = existingCommands.length > 0 || existingRules.length > 0 || existingSkills.length > 0;
+    const hasExisting =
+      existingCommands.length > 0 || existingRules.length > 0 || existingSkills.length > 0;
 
     console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
     console.log();
@@ -188,7 +183,9 @@ export const pullCommand = defineCommand({
           dir: commandsDir,
           force: true,
         });
-        s.stop(`${targetConfig.commandsLabel.charAt(0).toUpperCase() + targetConfig.commandsLabel.slice(1)} updated`);
+        s.stop(
+          `${targetConfig.commandsLabel.charAt(0).toUpperCase() + targetConfig.commandsLabel.slice(1)} updated`,
+        );
       }
 
       if (shouldPullRules) {
@@ -197,7 +194,9 @@ export const pullCommand = defineCommand({
           dir: rulesDir,
           force: true,
         });
-        s.stop(`${targetConfig.rulesLabel.charAt(0).toUpperCase() + targetConfig.rulesLabel.slice(1)} updated`);
+        s.stop(
+          `${targetConfig.rulesLabel.charAt(0).toUpperCase() + targetConfig.rulesLabel.slice(1)} updated`,
+        );
       }
 
       if (shouldPullSkills) {
@@ -227,7 +226,7 @@ export const pullCommand = defineCommand({
         const added = newCommands.length - existingCommands.length;
         printSuccess(
           `${targetConfig.commandsLabel.charAt(0).toUpperCase() + targetConfig.commandsLabel.slice(1)}: ${highlight(newCommands.length.toString())} total` +
-            (added > 0 ? pc.green(` (+${added} new)`) : "")
+            (added > 0 ? pc.green(` (+${added} new)`) : ""),
         );
       }
 
@@ -235,7 +234,7 @@ export const pullCommand = defineCommand({
         const added = newRules.length - existingRules.length;
         printSuccess(
           `${targetConfig.rulesLabel.charAt(0).toUpperCase() + targetConfig.rulesLabel.slice(1)}: ${highlight(newRules.length.toString())} total` +
-            (added > 0 ? pc.green(` (+${added} new)`) : "")
+            (added > 0 ? pc.green(` (+${added} new)`) : ""),
         );
       }
 
@@ -243,7 +242,7 @@ export const pullCommand = defineCommand({
         const added = newSkills.length - existingSkills.length;
         printSuccess(
           `Skills: ${highlight(newSkills.length.toString())} total` +
-            (added > 0 ? pc.green(` (+${added} new)`) : "")
+            (added > 0 ? pc.green(` (+${added} new)`) : ""),
         );
       }
 

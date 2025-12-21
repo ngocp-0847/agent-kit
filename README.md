@@ -1,41 +1,41 @@
 <p align="center">
-  <img src="./thumbnail.png" alt="Cursor Kit" width="768" />
+  <img src="./thumbnail.png" alt="Agent Kit" width="768" />
 </p>
 
-<h1 align="center">✦ Cursor Kit ✦</h1>
+<h1 align="center">✦ Agent Kit ✦</h1>
 
 <p align="center">
-  <b>Supercharge your AI IDE with rules & commands</b><br/>
-  <sub>A CLI toolkit to manage, share, and sync Cursor IDE, GitHub Copilot, and Google AntiGravity configurations</sub>
+  <b>Supercharge your AI coding agents with rules & commands</b><br/>
+  <sub>A universal CLI toolkit to manage, share, and sync configurations for all AI coding agents</sub>
 </p>
 
 <p align="center">
-  <a style="text-decoration: none;" href="https://www.npmjs.com/package/cursor-kit-cli" target="_blank">
-    <img src="https://img.shields.io/npm/v/cursor-kit-cli?style=flat-square&color=000000" alt="npm version" />
+  <a style="text-decoration: none;" href="https://www.npmjs.com/package/agent-kit-cli" target="_blank">
+    <img src="https://img.shields.io/npm/v/agent-kit-cli?style=flat-square&color=000000" alt="npm version" />
   </a>
-  <a style="text-decoration: none;" href="https://www.npmjs.com/package/cursor-kit-cli" target="_blank">
-    <img src="https://img.shields.io/npm/dm/cursor-kit-cli?style=flat-square&color=000000" alt="npm downloads" />
+  <a style="text-decoration: none;" href="https://www.npmjs.com/package/agent-kit-cli" target="_blank">
+    <img src="https://img.shields.io/npm/dm/agent-kit-cli?style=flat-square&color=000000" alt="npm downloads" />
   </a>
-  <!-- <img src="https://img.shields.io/github/license/duongductrong/cursor-kit?style=flat-square&color=0047E1" alt="license" /> -->
+  <!-- <img src="https://img.shields.io/github/license/duongductrong/agent-kit?style=flat-square&color=0047E1" alt="license" /> -->
 </p>
 
 ## 🚀 Quick Start
 
 ```bash
 # Install globally
-npm install -g cursor-kit-cli
+npm install -g agent-kit-cli
 
 # Or use directly with npx
-npx cursor-kit-cli init
+npx agent-kit-cli init
 ```
 
-**CLI Aliases:** `cursor-kit`, `cursorkit`, or `ck`
+**CLI Aliases:** `agent-kit`, `agentkit`, or `ak`
 
 ```bash
 # All of these work
-cursor-kit init
-cursorkit init
-ck init
+agent-kit init
+agentkit init
+ak init
 ```
 
 ## ✨ Features
@@ -44,63 +44,66 @@ ck init
 - **📋 Rules** - Project-specific AI behavior guidelines
 - **🎓 Skills** - Comprehensive guides with references for specialized domains
 - **🔄 Sync** - Keep configurations updated from the community
-- **🎯 Multi-Target** - Support for Cursor IDE, GitHub Copilot, and Google AntiGravity
-- **🖥️ Multi-Instance** - Run multiple Cursor accounts simultaneously (macOS)
+- **🎯 Multi-Agent** - Support for Cursor IDE, GitHub Copilot, Windsurf, Kiro, and more
 - **🎨 Beautiful CLI** - Delightful terminal experience
 
 ## 📦 Commands
 
 ### `init`
 
-Initialize commands, rules, and skills in your project with curated templates. Supports Cursor IDE, GitHub Copilot, and Google AntiGravity.
+Initialize commands, rules, and skills in your project with curated templates. Supports all major AI coding agents.
 
 ```bash
-cursor-kit init                       # Interactive: choose target IDE
-cursor-kit init -t cursor             # Initialize for Cursor IDE (.cursor/)
-cursor-kit init -t github-copilot     # Initialize for GitHub Copilot (.github/copilot-instructions/)
-cursor-kit init -t google-antigravity # Initialize for Google AntiGravity (.agent/)
-cursor-kit init -c                    # Only initialize commands
-cursor-kit init -r                    # Only initialize rules
-cursor-kit init -s                    # Only initialize skills
-cursor-kit init -f                    # Force overwrite existing files
-cursor-kit init -a                    # Install all templates without selection prompts
+agent-kit init                       # Interactive: choose target agent
+agent-kit init -t cursor             # Initialize for Cursor IDE (.cursor/)
+agent-kit init -t github-copilot     # Initialize for GitHub Copilot (.github/copilot-instructions/)
+agent-kit init -t windsurf           # Initialize for Windsurf (.windsurf/)
+agent-kit init -t kiro               # Initialize for Kiro (.kiro/steering/)
+agent-kit init -c                    # Only initialize commands
+agent-kit init -r                    # Only initialize rules
+agent-kit init -s                    # Only initialize skills
+agent-kit init -f                    # Force overwrite existing files
+agent-kit init -a                    # Install all templates without selection prompts
 ```
 
 **Target options:**
-- `cursor` (default) - Creates `.cursor/` directory structure for Cursor IDE
+- `cursor` - Creates `.cursor/` directory structure for Cursor IDE
 - `github-copilot` - Creates `.github/copilot-instructions.md` and related structure for GitHub Copilot
-- `google-antigravity` - Creates `.agent/` directory with rules, workflows, and skills for Google AntiGravity
+- `windsurf` - Creates `.windsurf/` directory with rules and workflows for Windsurf
+- `kiro` - Creates `.kiro/steering/` directory with steering files for Kiro
 
 ### `add`
 
-Interactively create a new command, rule, or skill with a starter template. Supports targeting different AI IDEs.
+Interactively create a new command, rule, or skill with a starter template. Supports targeting different AI coding agents.
 
 ```bash
-cursor-kit add                              # Interactive mode (prompts for target)
-cursor-kit add --target cursor              # Add to Cursor IDE
-cursor-kit add --target github-copilot      # Add to GitHub Copilot
-cursor-kit add --target google-antigravity  # Add to Google AntiGravity
-cursor-kit add -t command                   # Add a command
-cursor-kit add -t rule                      # Add a rule
-cursor-kit add -t skill                     # Add a skill
-cursor-kit add -t command -n my-command     # Quick create
-cursor-kit add --target cursor -t rule -n my-rule  # Full example
+agent-kit add                              # Interactive mode (prompts for target)
+agent-kit add --target cursor              # Add to Cursor IDE
+agent-kit add --target github-copilot      # Add to GitHub Copilot
+agent-kit add --target windsurf            # Add to Windsurf
+agent-kit add --target kiro                # Add to Kiro
+agent-kit add -t command                   # Add a command
+agent-kit add -t rule                      # Add a rule
+agent-kit add -t skill                     # Add a skill
+agent-kit add -t command -n my-command     # Quick create
+agent-kit add --target cursor -t rule -n my-rule  # Full example
 ```
 
 ### `pull`
 
-Fetch the latest updates from the cursor-kit repository. Supports targeting different AI IDEs.
+Fetch the latest updates from the agent-kit repository. Supports targeting different AI coding agents.
 
 ```bash
-cursor-kit pull                         # Interactive mode (prompts for target)
-cursor-kit pull -t cursor               # Pull to Cursor IDE
-cursor-kit pull -t github-copilot       # Pull to GitHub Copilot
-cursor-kit pull -t google-antigravity   # Pull to Google AntiGravity
-cursor-kit pull -c                      # Only pull commands
-cursor-kit pull -r                      # Only pull rules
-cursor-kit pull -s                      # Only pull skills
-cursor-kit pull -f                      # Force overwrite without confirmation
-cursor-kit pull -t cursor -r -f         # Pull rules to Cursor with force
+agent-kit pull                         # Interactive mode (prompts for target)
+agent-kit pull -t cursor               # Pull to Cursor IDE
+agent-kit pull -t github-copilot       # Pull to GitHub Copilot
+agent-kit pull -t windsurf             # Pull to Windsurf
+agent-kit pull -t kiro                 # Pull to Kiro
+agent-kit pull -c                      # Only pull commands
+agent-kit pull -r                      # Only pull rules
+agent-kit pull -s                      # Only pull skills
+agent-kit pull -f                      # Force overwrite without confirmation
+agent-kit pull -t cursor -r -f         # Pull rules to Cursor with force
 ```
 
 ### `list`
@@ -108,72 +111,31 @@ cursor-kit pull -t cursor -r -f         # Pull rules to Cursor with force
 Display all available commands, rules, and skills in your project.
 
 ```bash
-cursor-kit list           # List everything
-cursor-kit list -c        # Only list commands
-cursor-kit list -r        # Only list rules
-cursor-kit list -s        # Only list skills
-cursor-kit list -v        # Verbose mode with file paths
+agent-kit list           # List everything
+agent-kit list -c        # Only list commands
+agent-kit list -r        # Only list rules
+agent-kit list -s        # Only list skills
+agent-kit list -v        # Verbose mode with file paths
 ```
 
 ### `remove`
 
-Remove a command, rule, or skill from your project. Supports targeting different AI IDEs.
+Remove a command, rule, or skill from your project. Supports targeting different AI coding agents.
 
 ```bash
-cursor-kit remove                        # Interactive mode (prompts for target)
-cursor-kit remove --target cursor        # Remove from Cursor IDE
-cursor-kit remove --target github-copilot       # Remove from GitHub Copilot
-cursor-kit remove --target google-antigravity   # Remove from Google AntiGravity
-cursor-kit remove -t command -n my-command      # Quick remove
-cursor-kit remove -f                     # Skip confirmation
-cursor-kit remove --target cursor -t rule -n my-rule -f  # Full example
-```
-
-### `instance`
-
-Manage multiple Cursor IDE instances for multi-account login. **macOS only.**
-
-This command allows you to create separate Cursor instances, each with its own identity (bundle ID) and data directory. Perfect for users who need to work with multiple Cursor accounts simultaneously.
-
-```bash
-cursor-kit instance                                  # Interactive mode
-cursor-kit instance -l                               # List existing instances
-cursor-kit instance -a create -n "Cursor Work"       # Create instance
-cursor-kit instance -a reinstall -n "Cursor Work"    # Reinstall instance (fix after updates)
-cursor-kit instance -a remove -n "Cursor Work"       # Remove instance
-```
-
-**How it works:**
-
-- Creates a copy of Cursor.app in `~/Applications/`
-- Assigns a unique bundle identifier (e.g., `com.cursor.cursorwork`)
-- Creates a separate data directory in `~/Library/Application Support/`
-- Re-signs the app with an ad-hoc signature
-- Each instance can be logged into with a different Cursor account
-- Reinstall refreshes the instance with the latest Cursor version while preserving your data
-
-**Example workflow:**
-
-```bash
-# Create an instance for work projects
-cursor-kit instance -a create -n "Cursor Enterprise"
-
-# Create another for personal use
-cursor-kit instance -a create -n "Cursor Personal"
-
-# List all your instances
-cursor-kit instance --list
-
-# Fix an instance after Cursor update (preserves your data)
-cursor-kit instance -a reinstall -n "Cursor Enterprise"
-
-# Remove an instance when no longer needed
-cursor-kit instance -a remove -n "Cursor Personal"
+agent-kit remove                        # Interactive mode (prompts for target)
+agent-kit remove --target cursor        # Remove from Cursor IDE
+agent-kit remove --target github-copilot       # Remove from GitHub Copilot
+agent-kit remove --target windsurf             # Remove from Windsurf
+agent-kit remove --target kiro                 # Remove from Kiro
+agent-kit remove -t command -n my-command      # Quick remove
+agent-kit remove -f                     # Skip confirmation
+agent-kit remove --target cursor -t rule -n my-rule -f  # Full example
 ```
 
 ## 📁 Directory Structure
 
-After running `cursor-kit init`, your project will have different structures depending on the target:
+After running `agent-kit init`, your project will have different structures depending on the target agent:
 
 ### Cursor IDE (default)
 
@@ -250,11 +212,11 @@ your-project/
             └── ... (other skills)
 ```
 
-### Google AntiGravity
+### Windsurf
 
 ```
 your-project/
-└── .agent/
+└── .windsurf/
     ├── workflows/                 # Workflow templates (.md)
     │   ├── docs.md
     │   ├── explain.md
@@ -276,6 +238,32 @@ your-project/
         │   ├── SKILL.md
         │   └── references/
         └── ... (other skills)
+```
+
+### Kiro
+
+```
+your-project/
+└── .kiro/
+    └── steering/                  # Steering files (.md)
+        ├── docs.md
+        ├── explain.md
+        ├── fix.md
+        ├── implement.md
+        ├── refactor.md
+        ├── review.md
+        ├── test.md
+        ├── coding-style.md
+        ├── git.md
+        └── skills/                # Comprehensive guides with references
+            ├── aesthetic/
+            │   ├── SKILL.md
+            │   ├── assets/
+            │   └── references/
+            ├── backend-development/
+            │   ├── SKILL.md
+            │   └── references/
+            └── ... (other skills)
 ```
 
 ## 🎯 Included Templates
@@ -317,8 +305,8 @@ your-project/
 
 ```bash
 # Clone the repo
-git clone https://github.com/duongductrong/cursor-kit.git
-cd cursor-kit
+git clone https://github.com/duongductrong/agent-kit.git
+cd agent-kit
 
 # Install dependencies
 pnpm install
@@ -344,5 +332,5 @@ MIT © [duongductrong](https://github.com/duongductrong)
 ---
 
 <p align="center">
-  Made with ♥ for the Cursor community
+  Made with ♥ for the AI coding agent community
 </p>

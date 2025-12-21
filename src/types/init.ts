@@ -1,7 +1,4 @@
-export type InstructionTarget =
-  | "cursor"
-  | "github-copilot"
-  | "google-antigravity";
+export type InstructionTarget = "cursor" | "github-copilot" | "google-antigravity";
 
 export interface TargetConfig {
   label: string;

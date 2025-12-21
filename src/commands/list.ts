@@ -1,6 +1,6 @@
+import { join } from "node:path";
 import * as p from "@clack/prompts";
 import { defineCommand } from "citty";
-import { join } from "node:path";
 import pc from "picocolors";
 import { highlight, printDivider } from "../utils/branding";
 import {
@@ -19,17 +19,10 @@ interface ItemInfo {
   description?: string;
 }
 
-function extractDescription(
-  content: string,
-  isCommand: boolean
-): string | undefined {
+function extractDescription(content: string, isCommand: boolean): string | undefined {
   if (isCommand) {
     const firstLine = content.trim().split("\n")[0];
-    if (
-      firstLine &&
-      !firstLine.startsWith("#") &&
-      !firstLine.startsWith("---")
-    ) {
+    if (firstLine && !firstLine.startsWith("#") && !firstLine.startsWith("---")) {
       return firstLine.slice(0, 60) + (firstLine.length > 60 ? "..." : "");
     }
   } else {
@@ -41,11 +34,7 @@ function extractDescription(
   return undefined;
 }
 
-function getItems(
-  dir: string,
-  extension: string,
-  isCommand: boolean
-): ItemInfo[] {
+function getItems(dir: string, extension: string, isCommand: boolean): ItemInfo[] {
   const files = listFiles(dir, extension);
   return files.map((file) => {
     const filePath = join(dir, file);
@@ -126,20 +115,14 @@ export const listCommand = defineCommand({
     const rulesDir = getRulesDir();
     const skillsDir = getSkillsDir();
 
-    const commands = shouldListCommands
-      ? getItems(commandsDir, ".md", true)
-      : [];
+    const commands = shouldListCommands ? getItems(commandsDir, ".md", true) : [];
     const rules = shouldListRules ? getItems(rulesDir, ".mdc", false) : [];
     const skills = shouldListSkills ? getSkills(skillsDir) : [];
 
     if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
       console.log();
       console.log(pc.yellow("  No commands, rules, or skills found."));
-      console.log(
-        pc.dim("  Run ") +
-          highlight("cursor-kit init") +
-          pc.dim(" to get started.")
-      );
+      console.log(pc.dim("  Run ") + highlight("cursor-kit init") + pc.dim(" to get started."));
       console.log();
       p.outro(pc.dim("Nothing to show"));
       return;
@@ -149,9 +132,7 @@ export const listCommand = defineCommand({
 
     if (shouldListCommands && commands.length > 0) {
       console.log();
-      console.log(
-        pc.bold(pc.cyan("  📜 Commands")) + pc.dim(` (${commands.length})`)
-      );
+      console.log(pc.bold(pc.cyan("  📜 Commands")) + pc.dim(` (${commands.length})`));
       console.log();
 
       commands.forEach((cmd) => {
@@ -167,9 +148,7 @@ export const listCommand = defineCommand({
 
     if (shouldListRules && rules.length > 0) {
       console.log();
-      console.log(
-        pc.bold(pc.cyan("  📋 Rules")) + pc.dim(` (${rules.length})`)
-      );
+      console.log(pc.bold(pc.cyan("  📋 Rules")) + pc.dim(` (${rules.length})`));
       console.log();
 
       rules.forEach((rule) => {
@@ -185,9 +164,7 @@ export const listCommand = defineCommand({
 
     if (shouldListSkills && skills.length > 0) {
       console.log();
-      console.log(
-        pc.bold(pc.cyan("  🎯 Skills")) + pc.dim(` (${skills.length})`)
-      );
+      console.log(pc.bold(pc.cyan("  🎯 Skills")) + pc.dim(` (${skills.length})`));
       console.log();
 
       skills.forEach((skill) => {

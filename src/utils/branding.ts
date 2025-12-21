@@ -15,7 +15,7 @@ export function printBanner(): void {
   console.log(
     pc.dim("  ") +
       pc.bold(pc.cyan("✦")) +
-      pc.dim(" Supercharge your Cursor IDE with rules & commands")
+      pc.dim(" Supercharge your Cursor IDE with rules & commands"),
   );
   console.log();
 }
@@ -41,9 +41,7 @@ export function printDivider(): void {
 }
 
 export function printVersion(version: string): void {
-  console.log(
-    pc.dim("  ") + cursorGradient(`v${version}`) + pc.dim(" • Made with ♥")
-  );
+  console.log(pc.dim("  ") + cursorGradient(`v${version}`) + pc.dim(" • Made with ♥"));
   console.log();
 }
 
@@ -62,4 +60,3 @@ export function bold(text: string): string {
 export function gradientText(text: string): string {
   return cursorGradient(text);
 }
-

@@ -1,22 +1,15 @@
+import { join } from "node:path";
 import * as p from "@clack/prompts";
 import { defineCommand } from "citty";
-import { join } from "node:path";
 import pc from "picocolors";
 import type { InstructionTarget } from "../types/init";
 import { highlight } from "../utils/branding";
+import { deleteFile, dirExists, ensureDir, fileExists, readFile, writeFile } from "../utils/fs";
 import {
-  dirExists,
-  ensureDir,
-  fileExists,
-  writeFile,
-  readFile,
-  deleteFile,
-} from "../utils/fs";
-import {
-  promptTargetSelection,
-  isValidTarget,
-  getTargetDirectories,
   getTargetConfig,
+  getTargetDirectories,
+  isValidTarget,
+  promptTargetSelection,
 } from "../utils/target";
 import { convertMdToMdc } from "../utils/templates";
 
@@ -150,7 +143,10 @@ export const addCommand = defineCommand({
           {
             value: "command",
             label: target === "google-antigravity" ? "Workflow" : "Command",
-            hint: target === "google-antigravity" ? "A workflow template" : "A reusable prompt template",
+            hint:
+              target === "google-antigravity"
+                ? "A workflow template"
+                : "A reusable prompt template",
           },
           {
             value: "rule",
@@ -180,7 +176,8 @@ export const addCommand = defineCommand({
     } else {
       const nameResult = await p.text({
         message: `Enter ${itemLabel} name:`,
-        placeholder: itemType === "command" ? "my-command" : itemType === "rule" ? "my-rule" : "my-skill",
+        placeholder:
+          itemType === "command" ? "my-command" : itemType === "rule" ? "my-rule" : "my-skill",
         validate: (value) => {
           if (!value.trim()) return "Name is required";
           if (value.length < 2) return "Name must be at least 2 characters";
@@ -293,15 +290,18 @@ export const addCommand = defineCommand({
       } else if (isCommand) {
         console.log(pc.dim("  File: ") + highlight(displayPath));
       } else {
-        const finalPath = target === "cursor"
-          ? join(directories.rulesDir, convertMdToMdc(`${slug}.md`))
-          : targetPath;
+        const finalPath =
+          target === "cursor"
+            ? join(directories.rulesDir, convertMdToMdc(`${slug}.md`))
+            : targetPath;
         console.log(pc.dim("  File: ") + highlight(finalPath));
       }
       console.log();
 
       p.outro(
-        pc.green(`✨ ${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} created! Edit the file to customize it.`)
+        pc.green(
+          `✨ ${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} created! Edit the file to customize it.`,
+        ),
       );
     } catch (error) {
       s.stop("Failed");

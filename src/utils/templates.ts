@@ -1,7 +1,17 @@
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REPO_RAW_URL, TEMPLATE_PATHS } from "./constants";
-import { fileExists, readFile, dirExists, listFiles, listDirs, copyDir, ensureDir, writeFile, deleteFile } from "./fs";
+import {
+  copyDir,
+  deleteFile,
+  dirExists,
+  ensureDir,
+  fileExists,
+  listDirs,
+  listFiles,
+  readFile,
+  writeFile,
+} from "./fs";
 
 export interface TemplateManifest {
   commands: string[];
@@ -84,18 +94,18 @@ export function convertMdToMdc(filename: string): string {
 
 export function transformTocContentForCursor(content: string): string {
   // Transform skill links: SKILL.md -> SKILL.mdc
-  content = content.replace(/\]\(\.\.\/skills\/([^/]+)\/SKILL\.md\)/g, '](../skills/$1/SKILL.mdc)');
-  
+  content = content.replace(/\]\(\.\.\/skills\/([^/]+)\/SKILL\.md\)/g, "](../skills/$1/SKILL.mdc)");
+
   // Transform rule links: .md -> .mdc (for rules in the same directory)
-  content = content.replace(/\]\(\.\/([^)]+)\.md\)/g, '](./$1.mdc)');
-  
+  content = content.replace(/\]\(\.\/([^)]+)\.md\)/g, "](./$1.mdc)");
+
   return content;
 }
 
 export function copyLocalSkill(
   skillName: string,
   targetDir: string,
-  convertToMdc: boolean = false
+  convertToMdc = false,
 ): boolean {
   const sourcePath = getLocalSkillDir(skillName);
   if (!sourcePath) return false;
@@ -135,10 +145,7 @@ export async function fetchTemplateManifest(): Promise<TemplateManifest> {
   return response.json() as Promise<TemplateManifest>;
 }
 
-export async function fetchTemplateContent(
-  type: TemplateType,
-  filename: string
-): Promise<string> {
+export async function fetchTemplateContent(type: TemplateType, filename: string): Promise<string> {
   const localContent = getLocalTemplateContent(type, filename);
   if (localContent !== null) {
     return localContent;
@@ -158,7 +165,7 @@ export async function fetchTemplateContent(
 
 export async function fetchMultipleTemplates(
   type: TemplateType,
-  filenames: string[]
+  filenames: string[],
 ): Promise<Map<string, string>> {
   const results = new Map<string, string>();
 
@@ -214,8 +221,7 @@ export function extractFrontmatter(content: string): {
     const match = line.match(/^(\w+):\s*(.+)$/);
     if (match) {
       const [, key, value] = match;
-      result[key] =
-        value === "true" ? true : value === "false" ? false : value;
+      result[key] = value === "true" ? true : value === "false" ? false : value;
     }
   }
 
@@ -227,13 +233,13 @@ export function extractFrontmatter(content: string): {
  */
 function getSemanticDescriptionForRule(filename: string): string {
   const baseName = filename.replace(/\.(md|mdc)$/, "").toLowerCase();
-  
+
   const semanticMap: Record<string, string> = {
-    "toc": "Table of contents, skill routing, rule selection guide, when to apply rules",
-    "git": "Git commit conventions, branching strategy, version control, commit messages",
+    toc: "Table of contents, skill routing, rule selection guide, when to apply rules",
+    git: "Git commit conventions, branching strategy, version control, commit messages",
     "coding-style": "Code formatting, style guidelines, best practices, clean code",
   };
-  
+
   return semanticMap[baseName] || "";
 }
 
@@ -243,25 +249,25 @@ function getSemanticDescriptionForRule(filename: string): string {
  * Otherwise uses trigger: model_decision
  * Adds semantic keywords to description for better IDE understanding
  */
-export function transformRuleForAntiGravity(content: string, filename: string = ""): string {
+export function transformRuleForAntiGravity(content: string, filename = ""): string {
   const frontmatter = extractFrontmatter(content);
   const body = stripFrontmatter(content);
-  
+
   // Determine trigger type based on alwaysApply flag
   const trigger = frontmatter.alwaysApply === true ? "always_on" : "model_decision";
-  
+
   // Build description with semantic keywords
   const existingDesc = frontmatter.description || frontmatter.name || "";
   const semanticDesc = getSemanticDescriptionForRule(filename);
   const description = semanticDesc || existingDesc;
-  
+
   // Create AntiGravity frontmatter
   let newFrontmatter = `---\ntrigger: ${trigger}\n`;
   if (description) {
     newFrontmatter += `description: ${description}\n`;
   }
   newFrontmatter += "---\n\n";
-  
+
   return newFrontmatter + body;
 }
 
@@ -272,14 +278,19 @@ export function transformRuleForAntiGravity(content: string, filename: string = 
 export function transformCommandToWorkflow(content: string, filename: string): string {
   const frontmatter = extractFrontmatter(content);
   const body = stripFrontmatter(content);
-  
+
   // Use existing description or derive from filename
-  const description = frontmatter.description || 
-    filename.replace(/\.md$/, "").split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-  
+  const description =
+    frontmatter.description ||
+    filename
+      .replace(/\.md$/, "")
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
   // Create AntiGravity workflow frontmatter
   const newFrontmatter = `---\ndescription: ${description}\n---\n\n`;
-  
+
   return newFrontmatter + body;
 }
 
@@ -290,17 +301,17 @@ export function transformCommandToWorkflow(content: string, filename: string): s
 export function transformSkillForAntiGravity(content: string): string {
   const frontmatter = extractFrontmatter(content);
   const body = stripFrontmatter(content);
-  
+
   // Use existing description from SKILL.md metadata
   const description = frontmatter.description || frontmatter.name || "";
-  
+
   // Create AntiGravity skill frontmatter with manual trigger
   let newFrontmatter = `---\ntrigger: manual\n`;
   if (description) {
     newFrontmatter += `description: ${description}\n`;
   }
   newFrontmatter += "---\n\n";
-  
+
   return newFrontmatter + body;
 }
 
@@ -308,10 +319,7 @@ export function transformSkillForAntiGravity(content: string): string {
  * Copy a local skill to AntiGravity format.
  * Transforms SKILL.md with proper frontmatter.
  */
-export function copyLocalSkillForAntiGravity(
-  skillName: string,
-  targetDir: string
-): boolean {
+export function copyLocalSkillForAntiGravity(skillName: string, targetDir: string): boolean {
   const sourcePath = getLocalSkillDir(skillName);
   if (!sourcePath) return false;
 
@@ -334,19 +342,17 @@ export function generateCopilotIndex(
   commands: string[],
   rules: string[],
   skills: string[],
-  alwaysApplyRules: string[] = []
+  alwaysApplyRules: string[] = [],
 ): string {
   let output = "# GitHub Copilot Custom Instructions\n\n";
   output += "> Generated by cursor-kit-cli\n\n";
-  output +=
-    "This file provides instructions for GitHub Copilot. ";
+  output += "This file provides instructions for GitHub Copilot. ";
   output +=
     "When working on tasks, read the relevant files from the `copilot-instructions/` directory as needed.\n\n";
 
   if (alwaysApplyRules.length > 0) {
     output += "## Rules Applied Automatically\n\n";
-    output +=
-      "The following rules are always applied. Read these files for context:\n\n";
+    output += "The following rules are always applied. Read these files for context:\n\n";
     for (const rule of alwaysApplyRules) {
       const ruleName = rule.replace(/\.md$/, "");
       output += `- **${ruleName}**: Read \`.github/copilot-instructions/rules/${rule}\` for guidelines\n`;
@@ -356,8 +362,7 @@ export function generateCopilotIndex(
 
   if (commands.length > 0) {
     output += "## Commands\n\n";
-    output +=
-      "When the user requests a command, read the corresponding file:\n\n";
+    output += "When the user requests a command, read the corresponding file:\n\n";
     for (const cmd of commands) {
       const cmdName = cmd.replace(/\.md$/, "");
       output += `- **${cmdName}**: Read \`.github/copilot-instructions/commands/${cmd}\` when user requests "${cmdName}"\n`;
@@ -367,8 +372,7 @@ export function generateCopilotIndex(
 
   if (rules.length > 0) {
     output += "## Rules\n\n";
-    output +=
-      "Apply these rules when relevant to the task. Read the files as needed:\n\n";
+    output += "Apply these rules when relevant to the task. Read the files as needed:\n\n";
     for (const rule of rules) {
       const ruleName = rule.replace(/\.md$/, "");
       output += `- **${ruleName}**: Read \`.github/copilot-instructions/rules/${rule}\` for ${ruleName} guidelines\n`;
@@ -387,12 +391,9 @@ export function generateCopilotIndex(
   }
 
   output += "## Usage Guidelines\n\n";
-  output +=
-    "- **Don't read all files at once** - Only read files relevant to the current task\n";
-  output +=
-    "- **Commands**: Read command files when the user explicitly requests that command\n";
-  output +=
-    "- **Rules**: Reference rules when they apply to the current coding task\n";
+  output += "- **Don't read all files at once** - Only read files relevant to the current task\n";
+  output += "- **Commands**: Read command files when the user explicitly requests that command\n";
+  output += "- **Rules**: Reference rules when they apply to the current coding task\n";
   output +=
     "- **Skills**: Read skill files when working in that domain (e.g., frontend-development for React components)\n";
   output +=

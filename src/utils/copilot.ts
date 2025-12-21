@@ -1,27 +1,27 @@
 import { join } from "node:path";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
+import { printSuccess } from "./branding";
 import {
+  deleteFile,
+  dirExists,
   ensureDir,
   fileExists,
-  dirExists,
-  writeFile,
-  deleteFile,
-  readFile,
-  getCopilotInstructionsPath,
-  getCopilotInstructionsDir,
   getCopilotCommandsDir,
+  getCopilotInstructionsDir,
+  getCopilotInstructionsPath,
   getCopilotRulesDir,
   getCopilotSkillsDir,
+  readFile,
+  writeFile,
 } from "./fs";
 import {
-  fetchMultipleTemplates,
   copyLocalSkill,
-  stripFrontmatter,
   extractFrontmatter,
+  fetchMultipleTemplates,
   generateCopilotIndex,
+  stripFrontmatter,
 } from "./templates";
-import { printSuccess } from "./branding";
 
 export interface CopilotInstallResult {
   commands: string[];
@@ -32,7 +32,7 @@ export interface CopilotInstallResult {
 
 async function installCopilotCommands(
   commandsDir: string,
-  selectedCommands: string[]
+  selectedCommands: string[],
 ): Promise<string[]> {
   if (selectedCommands.length === 0) return [];
 
@@ -52,7 +52,7 @@ async function installCopilotCommands(
 
 async function installCopilotRules(
   rulesDir: string,
-  selectedRules: string[]
+  selectedRules: string[],
 ): Promise<{ installed: string[]; alwaysApply: string[] }> {
   if (selectedRules.length === 0) return { installed: [], alwaysApply: [] };
 
@@ -82,7 +82,7 @@ async function installCopilotRules(
 
 async function installCopilotSkills(
   skillsDir: string,
-  selectedSkills: string[]
+  selectedSkills: string[],
 ): Promise<string[]> {
   if (selectedSkills.length === 0) return [];
 
@@ -117,10 +117,7 @@ async function installCopilotSkills(
   return installed;
 }
 
-export async function checkCopilotConflicts(
-  cwd: string,
-  force: boolean
-): Promise<boolean> {
+export async function checkCopilotConflicts(cwd: string, force: boolean): Promise<boolean> {
   const copilotDir = getCopilotInstructionsDir(cwd);
   const copilotIndexPath = getCopilotInstructionsPath(cwd);
 
@@ -145,7 +142,7 @@ export async function installCopilotInstructions(
   cwd: string,
   selectedCommands: string[],
   selectedRules: string[],
-  selectedSkills: string[]
+  selectedSkills: string[],
 ): Promise<CopilotInstallResult> {
   const commandsDir = getCopilotCommandsDir(cwd);
   const rulesDir = getCopilotRulesDir(cwd);
@@ -165,7 +162,7 @@ export async function installCopilotInstructions(
     installedCommands,
     installedRules,
     installedSkills,
-    alwaysApplyRules
+    alwaysApplyRules,
   );
 
   writeFile(copilotIndexPath, indexContent);
@@ -181,4 +178,3 @@ export async function installCopilotInstructions(
     alwaysApplyRules,
   };
 }
-

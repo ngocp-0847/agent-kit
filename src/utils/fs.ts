@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, statSync, cpSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 export function ensureDir(path: string): void {
@@ -36,7 +45,7 @@ export function copyDir(src: string, dest: string): void {
 
 export function listFiles(dir: string, extension?: string): string[] {
   if (!dirExists(dir)) return [];
-  
+
   const files = readdirSync(dir);
   if (extension) {
     return files.filter((f) => f.endsWith(extension));
@@ -46,7 +55,7 @@ export function listFiles(dir: string, extension?: string): string[] {
 
 export function listDirs(dir: string): string[] {
   if (!dirExists(dir)) return [];
-  
+
   return readdirSync(dir).filter((item) => {
     const itemPath = join(dir, item);
     return statSync(itemPath).isDirectory();
@@ -76,7 +85,7 @@ export function resolveFromCwd(...paths: string[]): string {
 export function getPackageJson(cwd: string = process.cwd()): Record<string, unknown> | null {
   const pkgPath = join(cwd, "package.json");
   if (!fileExists(pkgPath)) return null;
-  
+
   try {
     return JSON.parse(readFile(pkgPath));
   } catch {

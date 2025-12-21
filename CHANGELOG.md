@@ -83,14 +83,10 @@
 
 ### 🚀 Features
 
-* feat(instance): add CLI commands for managing Cursor IDE instances ([2dc9f5c](https://github.com/duongductrong/cursor-kit/commit/2dc9f5c7e64bc29296ddaec9826d1ca02319457f))
-
 ### 📚 Documentation
 
 * docs(README): update badge links for npm version and downloads ([740286e](https://github.com/duongductrong/cursor-kit/commit/740286e2eaaa79120e6d7dec86b58ef68025880f))
 * docs(README): enhance documentation and update badge links ([a6df2ec](https://github.com/duongductrong/cursor-kit/commit/a6df2ec6cd9682aaa4d1e5a6874deb4c31ba9db2))
-* docs(README): update instance command documentation to include reinstall option ([badc134](https://github.com/duongductrong/cursor-kit/commit/badc1349b3191c3beb6ec615b33793eb901e1493))
-* docs(README): add multi-instance management section for Cursor IDE ([6f3231d](https://github.com/duongductrong/cursor-kit/commit/6f3231d179039cad0cc74431cd9f35f836d65c77))
 
 ### ♻️ Code Refactoring
 
@@ -101,7 +97,6 @@
 * chore(master): release 1.2.0-beta.5 (#27) ([f3e1bad](https://github.com/duongductrong/cursor-kit/commit/f3e1badeb2928939769953cf2f84244c067a3783))
 * chore(master): release 1.2.0-beta.4 (#26) ([8bc720f](https://github.com/duongductrong/cursor-kit/commit/8bc720f613e6ae8dc649fc70d12a0473f7ebd6d4))
 * chore(master): release 1.2.0-beta.3 (#25) ([36872cc](https://github.com/duongductrong/cursor-kit/commit/36872cce6693f30fe395cc3a1c32bad48ed3a716))
-* chore(instance): add reinstall functionality for Cursor IDE instances ([0470069](https://github.com/duongductrong/cursor-kit/commit/04700691c261db3247e7206747a238c405e68777))
 * chore(master): release 1.2.0-beta.2 (#24) ([d38095c](https://github.com/duongductrong/cursor-kit/commit/d38095c20a5b043162dc330146ef60091f866eeb))
 * chore(master): release 1.2.0-beta.1 (#23) ([2f1cc06](https://github.com/duongductrong/cursor-kit/commit/2f1cc067f0a9ce518630e3f049419f89fb29ea2f))
 * chore(skills): introduce new skill "aesthetic" documentation for creating beautiful interfaces ([08b0a66](https://github.com/duongductrong/cursor-kit/commit/08b0a667c057494a5690c69ad674db34dcb63ae7))

@@ -1,18 +1,18 @@
 import * as p from "@clack/prompts";
 import type { InstructionTarget } from "../types/init";
 import {
-  getCursorDir,
-  getCommandsDir,
-  getRulesDir,
-  getSkillsDir,
-  getCopilotInstructionsDir,
-  getCopilotCommandsDir,
-  getCopilotRulesDir,
-  getCopilotSkillsDir,
   getAgentDir,
   getAgentRulesDir,
-  getAgentWorkflowsDir,
   getAgentSkillsDir,
+  getAgentWorkflowsDir,
+  getCommandsDir,
+  getCopilotCommandsDir,
+  getCopilotInstructionsDir,
+  getCopilotRulesDir,
+  getCopilotSkillsDir,
+  getCursorDir,
+  getRulesDir,
+  getSkillsDir,
 } from "./fs";
 
 interface TargetDirectories {
@@ -88,7 +88,7 @@ export function isValidTarget(value: string | undefined): value is InstructionTa
 
 export function getTargetDirectories(
   target: InstructionTarget,
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
 ): TargetDirectories {
   switch (target) {
     case "cursor":
@@ -118,4 +118,3 @@ export function getTargetDirectories(
 export function getTargetConfig(target: InstructionTarget): TargetConfig {
   return TARGET_CONFIGS[target];
 }
-

@@ -8,11 +8,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
-  "keywords": [
-    "sequential-thinking",
-    "problem-solving",
-    "agent-skill"
-  ],
+  "keywords": ["sequential-thinking", "problem-solving", "agent-skill"],
   "author": "Converted from Anthropic MCP Server",
   "license": "MIT",
   "devDependencies": {
@@ -20,12 +16,7 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": [
-      "**/tests/**/*.test.js"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "/tests/"
-    ]
+    "testMatch": ["**/tests/**/*.test.js"],
+    "coveragePathIgnorePatterns": ["/node_modules/", "/tests/"]
   }
 }

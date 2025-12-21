@@ -17,11 +17,7 @@
     "cursorkit": "./dist/cli.js",
     "ck": "./dist/cli.js"
   },
-  "files": [
-    "dist",
-    "templates",
-    "bin"
-  ],
+  "files": ["dist", "templates"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -30,15 +26,7 @@
     "lint": "biome check --write",
     "prepublishOnly": "npm run build"
   },
-  "keywords": [
-    "cursor",
-    "cursor-ide",
-    "cli",
-    "rules",
-    "commands",
-    "ai",
-    "productivity"
-  ],
+  "keywords": ["cursor", "cursor-ide", "cli", "rules", "commands", "ai", "productivity"],
   "author": "",
   "license": "MIT",
   "repository": {

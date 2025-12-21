@@ -8,11 +8,7 @@
     "review.md",
     "test.md"
   ],
-  "rules": [
-    "coding-style.md",
-    "git.md",
-    "toc.md"
-  ],
+  "rules": ["coding-style.md", "git.md", "toc.md"],
   "skills": [
     "aesthetic",
     "backend-development",

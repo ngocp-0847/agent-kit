@@ -1,21 +1,15 @@
-import { defineCommand } from "citty";
-import * as p from "@clack/prompts";
-import pc from "picocolors";
 import { join } from "node:path";
+import * as p from "@clack/prompts";
+import { defineCommand } from "citty";
+import pc from "picocolors";
 import type { InstructionTarget } from "../types/init";
-import {
-  listFiles,
-  listDirs,
-  removeFile,
-  fileExists,
-  dirExists,
-} from "../utils/fs";
 import { highlight, printSuccess } from "../utils/branding";
+import { dirExists, fileExists, listDirs, listFiles, removeFile } from "../utils/fs";
 import {
-  promptTargetSelection,
-  isValidTarget,
-  getTargetDirectories,
   getTargetConfig,
+  getTargetDirectories,
+  isValidTarget,
+  promptTargetSelection,
 } from "../utils/target";
 
 type ItemType = "command" | "rule" | "skill";
@@ -82,7 +76,11 @@ export const removeCommand = defineCommand({
 
     if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
       console.log();
-      console.log(pc.yellow(`  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, or skills to remove.`));
+      console.log(
+        pc.yellow(
+          `  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, or skills to remove.`,
+        ),
+      );
       console.log();
       p.outro(pc.dim("Nothing to do"));
       return;
@@ -167,9 +165,7 @@ export const removeCommand = defineCommand({
       itemName = nameResult as string;
     }
 
-    const targetPath = isSkill
-      ? join(dir, itemName)
-      : join(dir, `${itemName}${extension}`);
+    const targetPath = isSkill ? join(dir, itemName) : join(dir, `${itemName}${extension}`);
 
     const exists = isSkill ? dirExists(targetPath) : fileExists(targetPath);
 

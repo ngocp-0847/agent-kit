@@ -1,41 +1,38 @@
-import { defineCommand } from "citty";
-import * as p from "@clack/prompts";
-import pc from "picocolors";
 import { join } from "node:path";
+import * as p from "@clack/prompts";
+import { defineCommand } from "citty";
+import pc from "picocolors";
+import type { InstructionTarget } from "../types/init";
+import { highlight, printDivider, printSuccess } from "../utils/branding";
+import { checkCopilotConflicts, installCopilotInstructions } from "../utils/copilot";
 import {
   ensureDir,
-  getCursorDir,
-  getCommandsDir,
-  getRulesDir,
-  getSkillsDir,
-  getConflictingFiles,
-  getConflictingDirs,
-  writeFile,
   getAgentDir,
   getAgentRulesDir,
-  getAgentWorkflowsDir,
   getAgentSkillsDir,
+  getAgentWorkflowsDir,
+  getCommandsDir,
+  getConflictingDirs,
+  getConflictingFiles,
+  getCursorDir,
+  getRulesDir,
+  getSkillsDir,
+  writeFile,
 } from "../utils/fs";
-import { highlight, printDivider, printSuccess } from "../utils/branding";
 import {
-  fetchTemplateManifest,
-  fetchMultipleTemplates,
-  getTemplateLabel,
-  getSkillLabel,
-  copyLocalSkill,
-  convertMdToMdc,
-  transformTocContentForCursor,
-  transformRuleForAntiGravity,
-  transformCommandToWorkflow,
-  copyLocalSkillForAntiGravity,
   type TemplateManifest,
   type TemplateType,
+  convertMdToMdc,
+  copyLocalSkill,
+  copyLocalSkillForAntiGravity,
+  fetchMultipleTemplates,
+  fetchTemplateManifest,
+  getSkillLabel,
+  getTemplateLabel,
+  transformCommandToWorkflow,
+  transformRuleForAntiGravity,
+  transformTocContentForCursor,
 } from "../utils/templates";
-import { type InstructionTarget } from "../types/init";
-import {
-  checkCopilotConflicts,
-  installCopilotInstructions,
-} from "../utils/copilot";
 
 type ConflictStrategy = "overwrite" | "merge" | "cancel";
 
@@ -80,7 +77,7 @@ async function handleCopilotInstallation(
   },
   shouldInitCommands: boolean,
   shouldInitRules: boolean,
-  shouldInitSkills: boolean
+  shouldInitSkills: boolean,
 ): Promise<void> {
   const s = p.spinner();
 
@@ -133,11 +130,7 @@ async function handleCopilotInstallation(
     }
   }
 
-  if (
-    selectedCommands.length === 0 &&
-    selectedRules.length === 0 &&
-    selectedSkills.length === 0
-  ) {
+  if (selectedCommands.length === 0 && selectedRules.length === 0 && selectedSkills.length === 0) {
     p.cancel("No templates selected");
     process.exit(0);
   }
@@ -148,7 +141,7 @@ async function handleCopilotInstallation(
       cwd,
       selectedCommands,
       selectedRules,
-      selectedSkills
+      selectedSkills,
     );
     s.stop("GitHub Copilot instructions installed");
 
@@ -180,9 +173,7 @@ async function handleCopilotInstallation(
     p.outro(pc.green("✨ GitHub Copilot instructions created successfully!"));
   } catch (error) {
     s.stop("Failed");
-    p.cancel(
-      `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     process.exit(1);
   }
 }
@@ -199,7 +190,7 @@ async function handleAntiGravityInstallation(
   },
   shouldInitCommands: boolean,
   shouldInitRules: boolean,
-  shouldInitSkills: boolean
+  shouldInitSkills: boolean,
 ): Promise<void> {
   const s = p.spinner();
   const agentDir = getAgentDir(cwd);
@@ -212,7 +203,10 @@ async function handleAntiGravityInstallation(
   const existingWorkflows = getConflictingFiles(workflowsDir, manifest.commands);
   const existingSkills = getConflictingDirs(skillsDir, manifest.skills);
 
-  if ((existingRules.length > 0 || existingWorkflows.length > 0 || existingSkills.length > 0) && !args.force) {
+  if (
+    (existingRules.length > 0 || existingWorkflows.length > 0 || existingSkills.length > 0) &&
+    !args.force
+  ) {
     console.log();
     console.log(pc.yellow("⚠ Existing files found:"));
     for (const file of [...existingRules, ...existingWorkflows, ...existingSkills]) {
@@ -296,7 +290,7 @@ async function handleAntiGravityInstallation(
     if (selectedCommands.length > 0) {
       s.start("Installing workflows...");
       const templates = await fetchMultipleTemplates("commands", selectedCommands);
-      
+
       for (const [filename, content] of templates) {
         const transformedContent = transformCommandToWorkflow(content, filename);
         const filePath = join(workflowsDir, filename);
@@ -310,7 +304,7 @@ async function handleAntiGravityInstallation(
     if (selectedRules.length > 0) {
       s.start("Installing rules...");
       const templates = await fetchMultipleTemplates("rules", selectedRules);
-      
+
       for (const [filename, content] of templates) {
         const transformedContent = transformRuleForAntiGravity(content, filename);
         const filePath = join(rulesDir, filename);
@@ -360,16 +354,14 @@ async function handleAntiGravityInstallation(
     p.outro(pc.green("✨ Google AntiGravity configuration created successfully!"));
   } catch (error) {
     s.stop("Failed");
-    p.cancel(
-      `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     process.exit(1);
   }
 }
 
 async function selectTemplates(
   type: TemplateType,
-  availableTemplates: string[]
+  availableTemplates: string[],
 ): Promise<string[] | symbol> {
   const labelFn = type === "skills" ? getSkillLabel : getTemplateLabel;
 
@@ -410,12 +402,10 @@ async function selectTemplates(
 
 async function handleConflicts(
   type: TemplateType,
-  conflictingFiles: string[]
+  conflictingFiles: string[],
 ): Promise<ConflictStrategy | symbol> {
   console.log();
-  console.log(
-    pc.yellow(`⚠ ${conflictingFiles.length} existing ${type} found:`)
-  );
+  console.log(pc.yellow(`⚠ ${conflictingFiles.length} existing ${type} found:`));
   for (const file of conflictingFiles) {
     console.log(pc.dim(`   └─ ${file}`));
   }
@@ -450,10 +440,10 @@ async function installTemplates(
   targetDir: string,
   selectedTemplates: string[],
   conflictStrategy: ConflictStrategy,
-  target: InstructionTarget
+  target: InstructionTarget,
 ): Promise<InitResult> {
   const result: InitResult = { added: [], skipped: [] };
-  
+
   // For Cursor target, rules need .mdc extension, commands stay .md
   // For GitHub Copilot, everything stays .md
   const expectedFilenames = selectedTemplates.map((filename) => {
@@ -462,23 +452,18 @@ async function installTemplates(
     }
     return filename;
   });
-  
+
   const conflictingFiles = getConflictingFiles(targetDir, expectedFilenames);
 
   let templatesToInstall: string[];
 
   if (conflictStrategy === "merge") {
-    templatesToInstall = selectedTemplates.filter(
-      (t) => {
-        const expectedName = target === "cursor" && type === "rules" && t.endsWith(".md")
-          ? convertMdToMdc(t)
-          : t;
-        return !conflictingFiles.includes(expectedName);
-      }
-    );
-    result.skipped = conflictingFiles.filter((f) =>
-      expectedFilenames.includes(f)
-    );
+    templatesToInstall = selectedTemplates.filter((t) => {
+      const expectedName =
+        target === "cursor" && type === "rules" && t.endsWith(".md") ? convertMdToMdc(t) : t;
+      return !conflictingFiles.includes(expectedName);
+    });
+    result.skipped = conflictingFiles.filter((f) => expectedFilenames.includes(f));
   } else {
     templatesToInstall = selectedTemplates;
   }
@@ -493,16 +478,17 @@ async function installTemplates(
 
   for (const [filename, content] of templates) {
     // Convert .md to .mdc for rules when target is cursor
-    const outputFilename = target === "cursor" && type === "rules" && filename.endsWith(".md")
-      ? convertMdToMdc(filename)
-      : filename;
-    
+    const outputFilename =
+      target === "cursor" && type === "rules" && filename.endsWith(".md")
+        ? convertMdToMdc(filename)
+        : filename;
+
     // Transform toc.md content for Cursor to fix links
     let transformedContent = content;
     if (target === "cursor" && type === "rules" && filename === "toc.md") {
       transformedContent = transformTocContentForCursor(content);
     }
-    
+
     const filePath = join(targetDir, outputFilename);
     writeFile(filePath, transformedContent);
     result.added.push(outputFilename);
@@ -515,7 +501,7 @@ async function installSkills(
   targetDir: string,
   selectedSkills: string[],
   conflictStrategy: ConflictStrategy,
-  target: InstructionTarget
+  target: InstructionTarget,
 ): Promise<InitResult> {
   const result: InitResult = { added: [], skipped: [] };
   const conflictingDirs = getConflictingDirs(targetDir, selectedSkills);
@@ -523,12 +509,8 @@ async function installSkills(
   let skillsToInstall: string[];
 
   if (conflictStrategy === "merge") {
-    skillsToInstall = selectedSkills.filter(
-      (s) => !conflictingDirs.includes(s)
-    );
-    result.skipped = conflictingDirs.filter((d) =>
-      selectedSkills.includes(d)
-    );
+    skillsToInstall = selectedSkills.filter((s) => !conflictingDirs.includes(s));
+    result.skipped = conflictingDirs.filter((d) => selectedSkills.includes(d));
   } else {
     skillsToInstall = selectedSkills;
   }
@@ -555,8 +537,7 @@ async function installSkills(
 export const initCommand = defineCommand({
   meta: {
     name: "init",
-    description:
-      "Initialize .cursor/commands, .cursor/rules, and .cursor/skills in your project",
+    description: "Initialize .cursor/commands, .cursor/rules, and .cursor/skills in your project",
   },
   args: {
     force: {
@@ -611,7 +592,11 @@ export const initCommand = defineCommand({
     p.intro(pc.bgCyan(pc.black(" cursor-kit init ")));
 
     let target: InstructionTarget;
-    if (args.target === "github-copilot" || args.target === "cursor" || args.target === "google-antigravity") {
+    if (
+      args.target === "github-copilot" ||
+      args.target === "cursor" ||
+      args.target === "google-antigravity"
+    ) {
       target = args.target;
     } else {
       const selection = await promptTargetSelection();
@@ -632,9 +617,7 @@ export const initCommand = defineCommand({
       s.stop("Template manifest loaded");
     } catch (error) {
       s.stop("Failed to fetch manifest");
-      p.cancel(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
       process.exit(1);
     }
 
@@ -645,7 +628,7 @@ export const initCommand = defineCommand({
         args,
         shouldInitCommands,
         shouldInitRules,
-        shouldInitSkills
+        shouldInitSkills,
       );
       return;
     }
@@ -657,7 +640,7 @@ export const initCommand = defineCommand({
         args,
         shouldInitCommands,
         shouldInitRules,
-        shouldInitSkills
+        shouldInitSkills,
       );
       return;
     }
@@ -685,10 +668,7 @@ export const initCommand = defineCommand({
           selectedCommands = selection;
         }
 
-        const conflictingCommands = getConflictingFiles(
-          commandsDir,
-          selectedCommands
-        );
+        const conflictingCommands = getConflictingFiles(commandsDir, selectedCommands);
         let commandStrategy: ConflictStrategy = "overwrite";
 
         if (conflictingCommands.length > 0 && !args.force) {
@@ -706,7 +686,7 @@ export const initCommand = defineCommand({
           commandsDir,
           selectedCommands,
           commandStrategy,
-          target
+          target,
         );
         s.stop("Commands installed");
       }
@@ -749,7 +729,7 @@ export const initCommand = defineCommand({
           rulesDir,
           selectedRules,
           ruleStrategy,
-          target
+          target,
         );
         s.stop("Rules installed");
       }
@@ -781,12 +761,7 @@ export const initCommand = defineCommand({
         }
 
         s.start("Installing skills...");
-        results.skills = await installSkills(
-          skillsDir,
-          selectedSkills,
-          skillStrategy,
-          target
-        );
+        results.skills = await installSkills(skillsDir, selectedSkills, skillStrategy, target);
         s.stop("Skills installed");
       }
 
@@ -797,7 +772,7 @@ export const initCommand = defineCommand({
         const { added, skipped } = results.commands;
         if (added.length > 0 || skipped.length > 0) {
           printSuccess(
-            `Commands: ${highlight(added.length.toString())} added${skipped.length > 0 ? `, ${pc.yellow(skipped.length.toString())} skipped` : ""}`
+            `Commands: ${highlight(added.length.toString())} added${skipped.length > 0 ? `, ${pc.yellow(skipped.length.toString())} skipped` : ""}`,
           );
           for (const f of added) {
             console.log(pc.dim(`   └─ ${pc.green("+")} ${f}`));
@@ -812,7 +787,7 @@ export const initCommand = defineCommand({
         const { added, skipped } = results.rules;
         if (added.length > 0 || skipped.length > 0) {
           printSuccess(
-            `Rules: ${highlight(added.length.toString())} added${skipped.length > 0 ? `, ${pc.yellow(skipped.length.toString())} skipped` : ""}`
+            `Rules: ${highlight(added.length.toString())} added${skipped.length > 0 ? `, ${pc.yellow(skipped.length.toString())} skipped` : ""}`,
           );
           for (const f of added) {
             console.log(pc.dim(`   └─ ${pc.green("+")} ${f}`));
@@ -827,7 +802,7 @@ export const initCommand = defineCommand({
         const { added, skipped } = results.skills;
         if (added.length > 0 || skipped.length > 0) {
           printSuccess(
-            `Skills: ${highlight(added.length.toString())} added${skipped.length > 0 ? `, ${pc.yellow(skipped.length.toString())} skipped` : ""}`
+            `Skills: ${highlight(added.length.toString())} added${skipped.length > 0 ? `, ${pc.yellow(skipped.length.toString())} skipped` : ""}`,
           );
           for (const f of added) {
             console.log(pc.dim(`   └─ ${pc.green("+")} ${f}`));
@@ -856,9 +831,7 @@ export const initCommand = defineCommand({
       }
     } catch (error) {
       s.stop("Failed");
-      p.cancel(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
       process.exit(1);
     }
   },
