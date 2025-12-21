@@ -327,7 +327,7 @@ pnpm dev
 
 ## 📄 License
 
-MIT © [duongductrong](https://github.com/duongductrong)
+MIT © [ngocp-0847]
 
 ---
 
