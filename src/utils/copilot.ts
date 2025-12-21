@@ -90,28 +90,18 @@ async function installCopilotSkills(
   const installed: string[] = [];
 
   for (const skillName of selectedSkills) {
-    const success = copyLocalSkill(skillName, skillsDir);
+    const success = copyLocalSkill(skillName, skillsDir, false); // Don't convert to .mdc for GitHub Copilot
     if (!success) continue;
 
     const skillTargetDir = join(skillsDir, skillName);
-    const skillMdcPath = join(skillTargetDir, "SKILL.mdc");
     const skillMdPath = join(skillTargetDir, "SKILL.md");
 
-    // Handle SKILL.md (new format) or SKILL.mdc (backward compatibility)
+    // For GitHub Copilot, keep the frontmatter with name and description
     if (fileExists(skillMdPath)) {
-      // Already .md, just strip frontmatter if needed
-      const content = readFile(skillMdPath);
-      const cleanContent = stripFrontmatter(content);
-      writeFile(skillMdPath, cleanContent);
-    } else if (fileExists(skillMdcPath)) {
-      // Convert .mdc to .md (backward compatibility)
-      const content = readFile(skillMdcPath);
-      const cleanContent = stripFrontmatter(content);
-      writeFile(skillMdPath, cleanContent);
-      deleteFile(skillMdcPath);
+      // Skills should keep their frontmatter for GitHub Copilot (Claude format)
+      // No need to strip frontmatter like we do for other templates
+      installed.push(skillName);
     }
-
-    installed.push(skillName);
   }
 
   return installed;
@@ -120,11 +110,13 @@ async function installCopilotSkills(
 export async function checkCopilotConflicts(cwd: string, force: boolean): Promise<boolean> {
   const copilotDir = getCopilotInstructionsDir(cwd);
   const copilotIndexPath = getCopilotInstructionsPath(cwd);
+  const claudeSkillsDir = getCopilotSkillsDir(cwd);
 
   const hasExistingDir = dirExists(copilotDir);
   const hasExistingIndex = fileExists(copilotIndexPath);
+  const hasExistingSkills = dirExists(claudeSkillsDir);
 
-  if ((hasExistingDir || hasExistingIndex) && !force) {
+  if ((hasExistingDir || hasExistingIndex || hasExistingSkills) && !force) {
     const overwrite = await p.confirm({
       message: "GitHub Copilot instructions already exist. Overwrite?",
       initialValue: false,
@@ -167,9 +159,12 @@ export async function installCopilotInstructions(
 
   writeFile(copilotIndexPath, indexContent);
 
-  printSuccess(`GitHub Copilot instructions generated`);
+  printSuccess("GitHub Copilot instructions generated");
   console.log(pc.dim(`   └─ ${copilotIndexPath}`));
   console.log(pc.dim(`   └─ ${getCopilotInstructionsDir(cwd)}/`));
+  if (installedSkills.length > 0) {
+    console.log(pc.dim(`   └─ ${getCopilotSkillsDir(cwd)}/`));
+  }
 
   return {
     commands: installedCommands,

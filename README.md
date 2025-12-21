@@ -65,7 +65,7 @@ agent-kit init -a                    # Install all templates without selection p
 
 **Target options:**
 - `cursor` - Creates `.cursor/` directory structure for Cursor IDE
-- `github-copilot` - Creates `.github/copilot-instructions.md` and related structure for GitHub Copilot
+- `github-copilot` - Creates `.github/copilot-instructions.md` and related structure for GitHub Copilot. Skills are created in `.claude/skills/` for automatic discovery by GitHub Copilot Agent Skills
 - `windsurf` - Creates `.windsurf/` directory with rules and workflows for Windsurf
 - `kiro` - Creates `.kiro/steering/` directory with steering files for Kiro
 
@@ -183,31 +183,34 @@ your-project/
 
 ```
 your-project/
-└── .github/
-    ├── copilot-instructions.md    # Main instructions file
-    └── copilot-instructions/      # Organized instructions
-        ├── commands/              # Prompt templates (.md)
-        │   ├── docs.md
-        │   ├── explain.md
-        │   ├── fix.md
-        │   ├── implement.md
-        │   ├── refactor.md
-        │   ├── review.md
-        │   └── test.md
-        ├── rules/                 # AI behavior rules (.md)
-        │   ├── coding-style.md
-        │   ├── git.md
-        │   └── toc.md
-        └── skills/                # Comprehensive guides with references
-            ├── aesthetic/
-            │   ├── SKILL.md
-            │   ├── assets/
-            │   └── references/
-            ├── backend-development/
-            │   ├── SKILL.md
-            │   └── references/
-            └── ... (other skills)
+├── .github/
+│   ├── copilot-instructions.md    # Main instructions file
+│   └── copilot-instructions/      # Organized instructions
+│       ├── commands/              # Prompt templates (.md)
+│       │   ├── docs.md
+│       │   ├── explain.md
+│       │   ├── fix.md
+│       │   ├── implement.md
+│       │   ├── refactor.md
+│       │   ├── review.md
+│       │   └── test.md
+│       └── rules/                 # AI behavior rules (.md)
+│           ├── coding-style.md
+│           ├── git.md
+│           └── toc.md
+└── .claude/
+    └── skills/                    # Agent Skills (auto-discovered by GitHub Copilot)
+        ├── aesthetic/
+        │   ├── SKILL.md
+        │   ├── assets/
+        │   └── references/
+        ├── backend-development/
+        │   ├── SKILL.md
+        │   └── references/
+        └── ... (other skills)
 ```
+
+> **Note**: Skills are created in `.claude/skills/` to leverage GitHub Copilot's [Agent Skills feature](https://github.blog/changelog/2025-12-18-github-copilot-now-supports-agent-skills/), which automatically discovers and loads skills from this directory when relevant to your tasks.
 
 ### Windsurf
 
