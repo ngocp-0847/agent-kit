@@ -827,7 +827,7 @@ export const initCommand = defineCommand({
         p.outro(pc.yellow("No new templates added (all selected files already exist)"));
       } else {
         console.log();
-        p.outro(pc.green("✨ Cursor Kit initialized successfully!"));
+        p.outro(pc.green("✨ Agent Kit initialized successfully!"));
       }
     } catch (error) {
       s.stop("Failed");
