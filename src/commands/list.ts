@@ -122,7 +122,7 @@ export const listCommand = defineCommand({
     if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
       console.log();
       console.log(pc.yellow("  No commands, rules, or skills found."));
-      console.log(pc.dim("  Run ") + highlight("cursor-kit init") + pc.dim(" to get started."));
+      console.log(pc.dim("  Run ") + highlight("agent-kit init") + pc.dim(" to get started."));
       console.log();
       p.outro(pc.dim("Nothing to show"));
       return;

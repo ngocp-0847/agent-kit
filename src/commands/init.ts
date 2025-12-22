@@ -15,10 +15,19 @@ import {
   getConflictingDirs,
   getConflictingFiles,
   getCursorDir,
+  getKiroMcpConfigPath,
+  getKiroSettingsDir,
+  getKiroSkillsDir,
+  getKiroSteeringDir,
   getRulesDir,
   getSkillsDir,
   writeFile,
 } from "../utils/fs";
+import {
+  getMcpServerSetupInstructions,
+  installMcpServers,
+  promptMcpServerSelection,
+} from "../utils/mcp";
 import {
   type TemplateManifest,
   type TemplateType,
@@ -46,22 +55,27 @@ async function promptTargetSelection(): Promise<InstructionTarget | symbol> {
     message: "Which AI IDE are you using?",
     options: [
       {
+        value: "github-copilot" as const,
+        label: "GitHub Copilot (VSCode)",
+        hint: "Generate .github/copilot-instructions.md",
+      },
+      {
         value: "cursor" as const,
         label: "Cursor",
         hint: "Generate .cursor/ directory structure",
-      },
-      {
-        value: "github-copilot" as const,
-        label: "GitHub Copilot",
-        hint: "Generate .github/copilot-instructions.md",
       },
       {
         value: "google-antigravity" as const,
         label: "Google AntiGravity",
         hint: "Generate .agent/ directory with rules and workflows",
       },
+      {
+        value: "kiro" as const,
+        label: "Kiro",
+        hint: "Generate .kiro/steering/ directory with MCP support",
+      },
     ],
-    initialValue: "cursor",
+    initialValue: "github-copilot",
   });
 }
 
@@ -359,6 +373,222 @@ async function handleAntiGravityInstallation(
   }
 }
 
+async function handleKiroInstallation(
+  cwd: string,
+  manifest: TemplateManifest,
+  args: {
+    all?: boolean;
+    commands?: boolean;
+    rules?: boolean;
+    skills?: boolean;
+    mcp?: boolean;
+    force?: boolean;
+  },
+  shouldInitCommands: boolean,
+  shouldInitRules: boolean,
+  shouldInitSkills: boolean,
+  shouldInitMcp: boolean,
+): Promise<void> {
+  const s = p.spinner();
+  const kiroDir = getKiroSteeringDir(cwd);
+  const skillsDir = getKiroSkillsDir(cwd);
+  const mcpConfigPath = getKiroMcpConfigPath(cwd);
+
+  // Check for existing conflicts
+  const allTemplates = [...manifest.commands, ...manifest.rules];
+  const existingFiles = getConflictingFiles(kiroDir, allTemplates);
+  const existingSkills = getConflictingDirs(skillsDir, manifest.skills);
+
+  if ((existingFiles.length > 0 || existingSkills.length > 0) && !args.force) {
+    console.log();
+    console.log(pc.yellow("⚠ Existing files found:"));
+    for (const file of [...existingFiles, ...existingSkills]) {
+      console.log(pc.dim(`   └─ ${file}`));
+    }
+    console.log();
+
+    const proceed = await p.confirm({
+      message: "Overwrite existing files?",
+      initialValue: false,
+    });
+
+    if (p.isCancel(proceed) || !proceed) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+  }
+
+  let selectedCommands: string[] = [];
+  let selectedRules: string[] = [];
+  let selectedSkills: string[] = [];
+  let selectedMcpServers: string[] = [];
+
+  // Commands and rules go to the same steering directory in Kiro
+  if (shouldInitCommands) {
+    if (args.all) {
+      selectedCommands = manifest.commands;
+    } else {
+      const selection = await selectTemplates("commands", manifest.commands);
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      selectedCommands = selection as string[];
+    }
+  }
+
+  if (shouldInitRules) {
+    if (args.all) {
+      selectedRules = manifest.rules;
+    } else {
+      const selection = await selectTemplates("rules", manifest.rules);
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      selectedRules = selection as string[];
+    }
+  }
+
+  if (shouldInitSkills) {
+    if (args.all) {
+      selectedSkills = manifest.skills;
+    } else {
+      const selection = await selectTemplates("skills", manifest.skills);
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      selectedSkills = selection as string[];
+    }
+  }
+
+  if (shouldInitMcp) {
+    if (args.all) {
+      selectedMcpServers = ["context7", "serena"];
+    } else {
+      const selection = await promptMcpServerSelection();
+      if (p.isCancel(selection)) {
+        p.cancel("Operation cancelled");
+        process.exit(0);
+      }
+      selectedMcpServers = selection as string[];
+    }
+  }
+
+  if (
+    selectedCommands.length === 0 &&
+    selectedRules.length === 0 &&
+    selectedSkills.length === 0 &&
+    selectedMcpServers.length === 0
+  ) {
+    p.cancel("No templates selected");
+    process.exit(0);
+  }
+
+  const results = {
+    steering: [] as string[],
+    skills: [] as string[],
+    mcpServers: { added: [] as string[], skipped: [] as string[] },
+  };
+
+  try {
+    ensureDir(kiroDir);
+    ensureDir(skillsDir);
+    ensureDir(getKiroSettingsDir(cwd));
+
+    // Install commands and rules as steering files
+    const allSteeringTemplates = [...selectedCommands, ...selectedRules];
+    if (allSteeringTemplates.length > 0) {
+      s.start("Installing steering files...");
+      const templates = await fetchMultipleTemplates("commands", selectedCommands);
+      const ruleTemplates = await fetchMultipleTemplates("rules", selectedRules);
+
+      // Merge templates
+      for (const [filename, content] of templates) {
+        const filePath = join(kiroDir, filename);
+        writeFile(filePath, content);
+        results.steering.push(filename);
+      }
+
+      for (const [filename, content] of ruleTemplates) {
+        const filePath = join(kiroDir, filename);
+        writeFile(filePath, content);
+        results.steering.push(filename);
+      }
+      s.stop("Steering files installed");
+    }
+
+    // Install skills
+    if (selectedSkills.length > 0) {
+      s.start("Installing skills...");
+      for (const skillName of selectedSkills) {
+        const success = copyLocalSkill(skillName, skillsDir, false); // Keep .md for Kiro
+        if (success) {
+          results.skills.push(skillName);
+        }
+      }
+      s.stop("Skills installed");
+    }
+
+    // Install MCP servers
+    if (selectedMcpServers.length > 0) {
+      s.start("Installing MCP servers...");
+      results.mcpServers = installMcpServers(mcpConfigPath, selectedMcpServers, "kiro");
+      s.stop("MCP servers installed");
+    }
+
+    printDivider();
+    console.log();
+
+    if (results.steering.length > 0) {
+      printSuccess(`Steering files: ${highlight(results.steering.length.toString())} added`);
+      for (const file of results.steering) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${file}`));
+      }
+    }
+
+    if (results.skills.length > 0) {
+      printSuccess(`Skills: ${highlight(results.skills.length.toString())} added`);
+      for (const skill of results.skills) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${skill}`));
+      }
+    }
+
+    if (results.mcpServers.added.length > 0 || results.mcpServers.skipped.length > 0) {
+      printSuccess(
+        `MCP servers: ${highlight(results.mcpServers.added.length.toString())} added${
+          results.mcpServers.skipped.length > 0
+            ? `, ${pc.yellow(results.mcpServers.skipped.length.toString())} skipped`
+            : ""
+        }`,
+      );
+      for (const server of results.mcpServers.added) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${server}`));
+      }
+      for (const server of results.mcpServers.skipped) {
+        console.log(pc.dim(`   └─ ${pc.yellow("○")} ${server} (already exists)`));
+      }
+    }
+
+    // Show setup instructions for MCP servers
+    if (results.mcpServers.added.length > 0) {
+      console.log();
+      console.log(pc.cyan("📋 MCP Server Setup Instructions:"));
+      console.log();
+      const instructions = getMcpServerSetupInstructions(results.mcpServers.added);
+      console.log(pc.dim(instructions));
+    }
+
+    console.log();
+    p.outro(pc.green("✨ Kiro configuration created successfully!"));
+  } catch (error) {
+    s.stop("Failed");
+    p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+    process.exit(1);
+  }
+}
+
 async function selectTemplates(
   type: TemplateType,
   availableTemplates: string[],
@@ -564,6 +794,12 @@ export const initCommand = defineCommand({
       description: "Only initialize skills",
       default: false,
     },
+    mcp: {
+      type: "boolean",
+      alias: "m",
+      description: "Only initialize MCP servers (Kiro only)",
+      default: false,
+    },
     all: {
       type: "boolean",
       alias: "a",
@@ -573,7 +809,7 @@ export const initCommand = defineCommand({
     target: {
       type: "string",
       alias: "t",
-      description: "Target AI IDE: 'cursor', 'github-copilot', or 'google-antigravity'",
+      description: "Target AI IDE: 'cursor', 'github-copilot', 'google-antigravity', or 'kiro'",
       default: undefined,
     },
   },
@@ -584,18 +820,20 @@ export const initCommand = defineCommand({
     const rulesDir = getRulesDir(cwd);
     const skillsDir = getSkillsDir(cwd);
 
-    const initAll = !args.commands && !args.rules && !args.skills;
+    const initAll = !args.commands && !args.rules && !args.skills && !args.mcp;
     const shouldInitCommands = initAll || args.commands;
     const shouldInitRules = initAll || args.rules;
     const shouldInitSkills = initAll || args.skills;
+    const shouldInitMcp = initAll || args.mcp;
 
-    p.intro(pc.bgCyan(pc.black(" cursor-kit init ")));
+    p.intro(pc.bgCyan(pc.black(" agent-kit init ")));
 
     let target: InstructionTarget;
     if (
       args.target === "github-copilot" ||
       args.target === "cursor" ||
-      args.target === "google-antigravity"
+      args.target === "google-antigravity" ||
+      args.target === "kiro"
     ) {
       target = args.target;
     } else {
@@ -641,6 +879,19 @@ export const initCommand = defineCommand({
         shouldInitCommands,
         shouldInitRules,
         shouldInitSkills,
+      );
+      return;
+    }
+
+    if (target === "kiro") {
+      await handleKiroInstallation(
+        cwd,
+        manifest,
+        args,
+        shouldInitCommands,
+        shouldInitRules,
+        shouldInitSkills,
+        shouldInitMcp,
       );
       return;
     }

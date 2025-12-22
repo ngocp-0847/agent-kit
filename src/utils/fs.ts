@@ -159,3 +159,24 @@ export function getAgentWorkflowsDir(cwd: string = process.cwd()): string {
 export function getAgentSkillsDir(cwd: string = process.cwd()): string {
   return join(getAgentDir(cwd), "skills");
 }
+
+// Kiro directory utilities
+export function getKiroDir(cwd: string = process.cwd()): string {
+  return join(cwd, ".kiro");
+}
+
+export function getKiroSettingsDir(cwd: string = process.cwd()): string {
+  return join(getKiroDir(cwd), "settings");
+}
+
+export function getKiroSteeringDir(cwd: string = process.cwd()): string {
+  return join(getKiroDir(cwd), "steering");
+}
+
+export function getKiroSkillsDir(cwd: string = process.cwd()): string {
+  return join(getKiroSteeringDir(cwd), "skills");
+}
+
+export function getKiroMcpConfigPath(cwd: string = process.cwd()): string {
+  return join(getKiroSettingsDir(cwd), "mcp.json");
+}

@@ -15,7 +15,7 @@ export function printBanner(): void {
   console.log(
     pc.dim("  ") +
       pc.bold(pc.cyan("✦")) +
-      pc.dim(" Supercharge your Cursor IDE with rules & commands"),
+      pc.dim(" Supercharge your AI coding agents with rules & commands"),
   );
   console.log();
 }

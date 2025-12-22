@@ -11,6 +11,8 @@ import {
   getCopilotRulesDir,
   getCopilotSkillsDir,
   getCursorDir,
+  getKiroSkillsDir,
+  getKiroSteeringDir,
   getRulesDir,
   getSkillsDir,
 } from "./fs";
@@ -56,6 +58,14 @@ export const TARGET_CONFIGS: Record<InstructionTarget, TargetConfig> = {
     rulesExtension: ".md",
     commandsExtension: ".md",
   },
+  kiro: {
+    label: "Kiro",
+    hint: ".kiro/steering/ directory",
+    commandsLabel: "steering",
+    rulesLabel: "steering",
+    rulesExtension: ".md",
+    commandsExtension: ".md",
+  },
 };
 
 export async function promptTargetSelection(): Promise<InstructionTarget | symbol> {
@@ -63,27 +73,32 @@ export async function promptTargetSelection(): Promise<InstructionTarget | symbo
     message: "Which AI IDE are you targeting?",
     options: [
       {
+        value: "github-copilot" as const,
+        label: "GitHub Copilot (VSCode)",
+        hint: "Work with .vscode/settings/ directory",
+      },
+      {
         value: "cursor" as const,
         label: "Cursor",
         hint: "Work with .cursor/ directory",
-      },
-      {
-        value: "github-copilot" as const,
-        label: "GitHub Copilot",
-        hint: "Work with .github/copilot-instructions/",
       },
       {
         value: "google-antigravity" as const,
         label: "Google AntiGravity",
         hint: "Work with .agent/ directory",
       },
+      {
+        value: "kiro" as const,
+        label: "Kiro",
+        hint: "Work with .kiro/steering/ directory",
+      },
     ],
-    initialValue: "cursor",
+    initialValue: "github-copilot",
   });
 }
 
 export function isValidTarget(value: string | undefined): value is InstructionTarget {
-  return value === "cursor" || value === "github-copilot" || value === "google-antigravity";
+  return value === "cursor" || value === "github-copilot" || value === "google-antigravity" || value === "kiro";
 }
 
 export function getTargetDirectories(
@@ -111,6 +126,13 @@ export function getTargetDirectories(
         commandsDir: getAgentWorkflowsDir(cwd),
         rulesDir: getAgentRulesDir(cwd),
         skillsDir: getAgentSkillsDir(cwd),
+      };
+    case "kiro":
+      return {
+        rootDir: getKiroSteeringDir(cwd),
+        commandsDir: getKiroSteeringDir(cwd),
+        rulesDir: getKiroSteeringDir(cwd),
+        skillsDir: getKiroSkillsDir(cwd),
       };
   }
 }

@@ -1,7 +1,7 @@
 {
-  "name": "cursor-kit-cli",
+  "name": "agent-kit-cli",
   "version": "1.5.0",
-  "description": "CLI toolkit to manage Cursor IDE rules and commands",
+  "description": "CLI toolkit to manage AI coding agent rules, commands, and MCP servers",
   "type": "module",
   "exports": {
     ".": {
@@ -13,9 +13,9 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "cursor-kit": "./dist/cli.js",
-    "cursorkit": "./dist/cli.js",
-    "ck": "./dist/cli.js"
+    "agent-kit": "./dist/cli.js",
+    "agentkit": "./dist/cli.js",
+    "ak": "./dist/cli.js"
   },
   "files": ["dist", "templates"],
   "scripts": {
@@ -26,12 +26,12 @@
     "lint": "biome check --write",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["cursor", "cursor-ide", "cli", "rules", "commands", "ai", "productivity"],
+  "keywords": ["cursor", "cursor-ide", "kiro", "github-copilot", "mcp", "cli", "rules", "commands", "ai", "productivity"],
   "author": "",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/duongductrong/cursor-kit"
+    "url": "https://github.com/duongductrong/agent-kit"
   },
   "engines": {
     "node": ">=18.0.0"
