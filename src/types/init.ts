@@ -6,3 +6,13 @@ export interface TargetConfig {
   rootDir: (cwd: string) => string;
   outputFile?: (cwd: string) => string;
 }
+
+export interface PowerSelectionArgs {
+  all?: boolean;
+  commands?: boolean;
+  rules?: boolean;
+  skills?: boolean;
+  mcp?: boolean;
+  powers?: boolean;
+  force?: boolean;
+}

@@ -180,3 +180,47 @@ export function getKiroSkillsDir(cwd: string = process.cwd()): string {
 export function getKiroMcpConfigPath(cwd: string = process.cwd()): string {
   return join(getKiroSettingsDir(cwd), "mcp.json");
 }
+
+// Power directory utilities
+export function getKiroPowersDir(cwd: string = process.cwd()): string {
+  return join(getKiroDir(cwd), "powers");
+}
+
+export function getKiroPowersCacheDir(cwd: string = process.cwd()): string {
+  return join(getKiroPowersDir(cwd), "cache");
+}
+
+export function getKiroPowersInstalledPath(cwd: string = process.cwd()): string {
+  return join(getKiroPowersDir(cwd), "installed.json");
+}
+
+export function getKiroPowerInstallDir(powerName: string, cwd: string = process.cwd()): string {
+  return join(getKiroPowersDir(cwd), powerName);
+}
+
+export function getKiroPowerManifestPath(powerName: string, cwd: string = process.cwd()): string {
+  return join(getKiroPowerInstallDir(powerName, cwd), "POWER.md");
+}
+
+export function getKiroPowerPackageJsonPath(
+  powerName: string,
+  cwd: string = process.cwd(),
+): string {
+  return join(getKiroPowerInstallDir(powerName, cwd), "package.json");
+}
+
+export function getKiroPowerMcpConfigPath(powerName: string, cwd: string = process.cwd()): string {
+  return join(getKiroPowerInstallDir(powerName, cwd), "mcp.json");
+}
+
+export function getKiroPowerSteeringDir(powerName: string, cwd: string = process.cwd()): string {
+  return join(getKiroPowerInstallDir(powerName, cwd), "steering");
+}
+
+export function getKiroPowerExamplesDir(powerName: string, cwd: string = process.cwd()): string {
+  return join(getKiroPowerInstallDir(powerName, cwd), "examples");
+}
+
+export function getKiroPowerServersDir(powerName: string, cwd: string = process.cwd()): string {
+  return join(getKiroPowerInstallDir(powerName, cwd), "servers");
+}

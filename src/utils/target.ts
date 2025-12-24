@@ -98,7 +98,12 @@ export async function promptTargetSelection(): Promise<InstructionTarget | symbo
 }
 
 export function isValidTarget(value: string | undefined): value is InstructionTarget {
-  return value === "cursor" || value === "github-copilot" || value === "google-antigravity" || value === "kiro";
+  return (
+    value === "cursor" ||
+    value === "github-copilot" ||
+    value === "google-antigravity" ||
+    value === "kiro"
+  );
 }
 
 export function getTargetDirectories(

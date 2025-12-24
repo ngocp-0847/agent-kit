@@ -12,8 +12,14 @@ import {
   promptTargetSelection,
 } from "../utils/target";
 import { convertMdToMdc } from "../utils/templates";
+import {
+  listAvailablePowers,
+  scaffoldPowerToProject,
+  checkPowerScaffoldConflicts,
+  getProjectPowerTargetDir,
+} from "../utils/power";
 
-type ItemType = "command" | "rule" | "skill";
+type ItemType = "command" | "rule" | "skill" | "power";
 
 const COMMAND_TEMPLATE = `You are a helpful assistant. Describe what this command does.
 
@@ -95,26 +101,38 @@ function generateSlug(name: string): string {
 export const addCommand = defineCommand({
   meta: {
     name: "add",
-    description: "Add a new command, rule, or skill",
+    description: "Add a new command, rule, skill, or power",
   },
   args: {
     type: {
       type: "string",
       alias: "t",
-      description: "Type: 'command', 'rule', or 'skill'",
+      description: "Type: 'command', 'rule', 'skill', or 'power'",
     },
     name: {
       type: "string",
       alias: "n",
-      description: "Name of the command, rule, or skill",
+      description: "Name of the command, rule, skill, or power template",
     },
     target: {
       type: "string",
       description: "Target IDE: 'cursor', 'github-copilot', or 'google-antigravity'",
     },
+    force: {
+      type: "boolean",
+      alias: "f",
+      description: "Force overwrite existing files",
+      default: false,
+    },
   },
   async run({ args }) {
     p.intro(pc.bgCyan(pc.black(" cursor-kit add ")));
+
+    // Check if adding a power (doesn't need target selection)
+    if (args.type === "power") {
+      await handleAddPower(args.name, args.force);
+      return;
+    }
 
     let target: InstructionTarget;
     if (isValidTarget(args.target)) {
@@ -134,8 +152,13 @@ export const addCommand = defineCommand({
     let itemType: ItemType;
     let itemName: string;
 
-    if (args.type && ["command", "rule", "skill"].includes(args.type)) {
+    if (args.type && ["command", "rule", "skill", "power"].includes(args.type)) {
       itemType = args.type as ItemType;
+      // Handle power type selected via interactive menu
+      if (itemType === "power") {
+        await handleAddPower(args.name, args.force);
+        return;
+      }
     } else {
       const typeResult = await p.select({
         message: "What do you want to add?",
@@ -158,6 +181,11 @@ export const addCommand = defineCommand({
             label: "Skill",
             hint: "Comprehensive guide with references",
           },
+          {
+            value: "power",
+            label: "Power",
+            hint: "Scaffold a Kiro power from template to project root",
+          },
         ],
       });
 
@@ -167,6 +195,12 @@ export const addCommand = defineCommand({
       }
 
       itemType = typeResult as ItemType;
+
+      // Handle power type selected via interactive menu
+      if (itemType === "power") {
+        await handleAddPower(args.name, args.force);
+        return;
+      }
     }
 
     const itemLabel = itemType === "command" ? targetConfig.commandsLabel : itemType;
@@ -310,3 +344,89 @@ export const addCommand = defineCommand({
     }
   },
 });
+
+/**
+ * Handle adding a power from template to project root
+ */
+async function handleAddPower(templateName?: string, force?: boolean): Promise<void> {
+  const cwd = process.cwd();
+  const availablePowers = listAvailablePowers(cwd);
+
+  if (availablePowers.length === 0) {
+    p.cancel("No power templates available");
+    process.exit(1);
+  }
+
+  let selectedPower: string;
+
+  if (templateName) {
+    const found = availablePowers.find(p => p.name === templateName);
+    if (!found) {
+      p.cancel(`Power template '${templateName}' not found. Available: ${availablePowers.map(p => p.name).join(", ")}`);
+      process.exit(1);
+    }
+    selectedPower = templateName;
+  } else {
+    const selection = await p.select({
+      message: "Select a power template to scaffold:",
+      options: availablePowers.map(power => ({
+        value: power.name,
+        label: power.displayName || power.name,
+        hint: power.description,
+      })),
+    });
+
+    if (p.isCancel(selection)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
+    selectedPower = selection as string;
+  }
+
+  // Check for conflicts
+  const conflicts = checkPowerScaffoldConflicts(selectedPower, cwd);
+  if (!conflicts.valid && !force) {
+    const shouldOverwrite = await p.confirm({
+      message: `${conflicts.errors.join(". ")} Overwrite?`,
+      initialValue: false,
+    });
+
+    if (p.isCancel(shouldOverwrite) || !shouldOverwrite) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+    force = true;
+  }
+
+  const s = p.spinner();
+  s.start(`Scaffolding power '${selectedPower}'...`);
+
+  const result = scaffoldPowerToProject(selectedPower, cwd, force);
+
+  if (result.errors.length > 0) {
+    s.stop("Failed");
+    p.cancel(`Error: ${result.errors.join(", ")}`);
+    process.exit(1);
+  }
+
+  s.stop("Power scaffolded");
+
+  const targetDir = getProjectPowerTargetDir(selectedPower, cwd);
+  console.log();
+  console.log(pc.dim("  Directory: ") + highlight(targetDir));
+  console.log(pc.dim("  Files created:"));
+  for (const item of result.added.slice(1)) { // Skip first "Power scaffolded" message
+    console.log(pc.dim(`    ${item}`));
+  }
+
+  if (result.warnings.length > 0) {
+    console.log();
+    for (const warning of result.warnings) {
+      console.log(pc.yellow(`  ⚠ ${warning}`));
+    }
+  }
+
+  console.log();
+  p.outro(pc.green(`✨ Power '${selectedPower}' scaffolded to project root!`));
+}

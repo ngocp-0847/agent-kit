@@ -130,9 +130,12 @@ export function writeMcpConfig(configPath: string, config: McpConfig): void {
   writeFile(configPath, JSON.stringify(config, null, 2));
 }
 
-export function mergeMcpConfig(existing: McpConfig | null, newServers: Record<string, McpServer>): McpConfig {
+export function mergeMcpConfig(
+  existing: McpConfig | null,
+  newServers: Record<string, McpServer>,
+): McpConfig {
   const base: McpConfig = existing || { mcpServers: {} };
-  
+
   return {
     mcpServers: {
       ...base.mcpServers,
@@ -143,7 +146,7 @@ export function mergeMcpConfig(existing: McpConfig | null, newServers: Record<st
 
 export async function promptMcpServerSelection(): Promise<string[] | symbol> {
   const availableServers = Object.keys(MCP_SERVER_TEMPLATES);
-  
+
   const selectionMode = await p.select({
     message: "How would you like to add MCP servers?",
     options: [
@@ -197,7 +200,7 @@ export function installMcpServers(
   _target?: InstructionTarget,
 ): { added: string[]; skipped: string[] } {
   const result = { added: [] as string[], skipped: [] as string[] };
-  
+
   if (selectedServers.length === 0) {
     return result;
   }
@@ -229,7 +232,7 @@ export function installMcpServers(
 
 export function getMcpServerSetupInstructions(serverNames: string[]): string {
   let instructions = "# MCP Server Setup Instructions\n\n";
-  
+
   for (const serverName of serverNames) {
     const template = MCP_SERVER_TEMPLATES[serverName];
     if (template?.setupInstructions) {

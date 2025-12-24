@@ -88,7 +88,7 @@ export const mcpCommand = defineCommand({
 
     if (args.status) {
       const config = readMcpConfig(mcpConfigPath);
-      
+
       console.log();
       if (!config || Object.keys(config.mcpServers).length === 0) {
         console.log(pc.yellow("No MCP servers configured"));
@@ -103,10 +103,10 @@ export const mcpCommand = defineCommand({
       for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
         const template = MCP_SERVER_TEMPLATES[name];
         const status = serverConfig.disabled ? pc.red("disabled") : pc.green("enabled");
-        
+
         console.log(`${pc.cyan(template?.displayName || name)} (${name}) - ${status}`);
         console.log(pc.dim(`  Command: ${serverConfig.command} ${serverConfig.args.join(" ")}`));
-        
+
         if (serverConfig.env && Object.keys(serverConfig.env).length > 0) {
           console.log(pc.dim("  Environment variables:"));
           for (const [key, value] of Object.entries(serverConfig.env)) {
@@ -114,11 +114,11 @@ export const mcpCommand = defineCommand({
             console.log(pc.dim(`    ${key}: ${displayValue}`));
           }
         }
-        
+
         if (serverConfig.autoApprove && serverConfig.autoApprove.length > 0) {
           console.log(pc.dim(`  Auto-approved tools: ${serverConfig.autoApprove.join(", ")}`));
         }
-        
+
         console.log();
       }
 
@@ -128,7 +128,7 @@ export const mcpCommand = defineCommand({
 
     if (args.info) {
       const template = MCP_SERVER_TEMPLATES[args.info];
-      
+
       if (!template) {
         p.cancel(`MCP server '${args.info}' not found. Use --list to see available servers.`);
         process.exit(1);
@@ -156,7 +156,7 @@ export const mcpCommand = defineCommand({
 
     if (args.add) {
       const selectedServers = await promptMcpServerSelection();
-      
+
       if (p.isCancel(selectedServers)) {
         p.cancel("Operation cancelled");
         process.exit(0);
@@ -168,7 +168,7 @@ export const mcpCommand = defineCommand({
       }
 
       const s = p.spinner();
-      
+
       try {
         s.start("Installing MCP servers...");
         const result = installMcpServers(mcpConfigPath, selectedServers, target);
@@ -185,11 +185,11 @@ export const mcpCommand = defineCommand({
                 : ""
             }`,
           );
-          
+
           for (const server of result.added) {
             console.log(pc.dim(`   └─ ${pc.green("+")} ${server}`));
           }
-          
+
           for (const server of result.skipped) {
             console.log(pc.dim(`   └─ ${pc.yellow("○")} ${server} (already exists)`));
           }
@@ -211,7 +211,7 @@ export const mcpCommand = defineCommand({
         p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
         process.exit(1);
       }
-      
+
       return;
     }
 

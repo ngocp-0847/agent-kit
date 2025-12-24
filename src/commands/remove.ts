@@ -11,8 +11,15 @@ import {
   isValidTarget,
   promptTargetSelection,
 } from "../utils/target";
+import {
+  getInstalledPowers,
+  getPowerDisplayName,
+  uninstallPower,
+  uninstallPowerWithErrorHandling,
+  validatePowerRemoval,
+} from "../utils/power";
 
-type ItemType = "command" | "rule" | "skill";
+type ItemType = "command" | "rule" | "skill" | "power";
 
 interface SelectOption {
   value: string;
@@ -23,13 +30,13 @@ interface SelectOption {
 export const removeCommand = defineCommand({
   meta: {
     name: "remove",
-    description: "Remove a command, rule, or skill",
+    description: "Remove a command, rule, skill, or power from your project",
   },
   args: {
     type: {
       type: "string",
       alias: "t",
-      description: "Type: 'command', 'rule', or 'skill'",
+      description: "Type: 'command', 'rule', 'skill', or 'power'",
     },
     name: {
       type: "string",
@@ -70,15 +77,16 @@ export const removeCommand = defineCommand({
     const commands = listFiles(commandsDir, ".md").map((f) => f.replace(".md", ""));
     const rules = listFiles(rulesDir, rulesExtension).map((f) => f.replace(rulesExtension, ""));
     const skills = listDirs(skillsDir);
+    const powers = getInstalledPowers().map((p) => p.name);
 
     console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
     console.log();
 
-    if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
+    if (commands.length === 0 && rules.length === 0 && skills.length === 0 && powers.length === 0) {
       console.log();
       console.log(
         pc.yellow(
-          `  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, or skills to remove.`,
+          `  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, skills, or powers to remove.`,
         ),
       );
       console.log();
@@ -89,7 +97,7 @@ export const removeCommand = defineCommand({
     let itemType: ItemType;
     let itemName: string;
 
-    if (args.type && ["command", "rule", "skill"].includes(args.type)) {
+    if (args.type && ["command", "rule", "skill", "power"].includes(args.type)) {
       itemType = args.type as ItemType;
     } else {
       const typeOptions: SelectOption[] = [];
@@ -118,6 +126,14 @@ export const removeCommand = defineCommand({
         });
       }
 
+      if (powers.length > 0) {
+        typeOptions.push({
+          value: "power",
+          label: "Power",
+          hint: `${powers.length} available`,
+        });
+      }
+
       const typeResult = await p.select({
         message: "What do you want to remove?",
         options: typeOptions,
@@ -134,8 +150,9 @@ export const removeCommand = defineCommand({
     const isCommand = itemType === "command";
     const isRule = itemType === "rule";
     const isSkill = itemType === "skill";
-    const items = isCommand ? commands : isRule ? rules : skills;
-    const dir = isCommand ? commandsDir : isRule ? rulesDir : skillsDir;
+    const isPower = itemType === "power";
+    const items = isCommand ? commands : isRule ? rules : isSkill ? skills : powers;
+    const dir = isCommand ? commandsDir : isRule ? rulesDir : isSkill ? skillsDir : "";
     const extension = isCommand ? ".md" : isRule ? rulesExtension : "";
     const itemLabel = isCommand ? targetConfig.commandsLabel : itemType;
 
@@ -147,10 +164,19 @@ export const removeCommand = defineCommand({
     if (args.name && items.includes(args.name)) {
       itemName = args.name;
     } else {
-      const itemOptions: SelectOption[] = items.map((item) => ({
-        value: item,
-        label: item,
-      }));
+      const itemOptions: SelectOption[] = items.map((item) => {
+        if (isPower) {
+          const displayName = getPowerDisplayName(item);
+          return {
+            value: item,
+            label: displayName !== item ? `${displayName} (${item})` : item,
+          };
+        }
+        return {
+          value: item,
+          label: item,
+        };
+      });
 
       const nameResult = await p.select({
         message: `Select ${itemLabel} to remove:`,
@@ -165,38 +191,104 @@ export const removeCommand = defineCommand({
       itemName = nameResult as string;
     }
 
-    const targetPath = isSkill ? join(dir, itemName) : join(dir, `${itemName}${extension}`);
-
-    const exists = isSkill ? dirExists(targetPath) : fileExists(targetPath);
-
-    if (!exists) {
-      p.cancel(`${itemLabel} '${itemName}' not found`);
-      process.exit(1);
-    }
-
-    if (!args.force) {
-      const displayName = isSkill ? itemName : itemName + extension;
-      const shouldDelete = await p.confirm({
-        message: `Are you sure you want to delete ${highlight(displayName)}?${isSkill ? " (This will remove the entire skill directory)" : ""}`,
-        initialValue: false,
-      });
-
-      if (p.isCancel(shouldDelete) || !shouldDelete) {
-        p.cancel("Operation cancelled");
-        process.exit(0);
+    // Handle Power removal differently
+    if (isPower) {
+      // Validate Power removal
+      const validation = validatePowerRemoval(itemName);
+      if (!validation.valid) {
+        p.cancel(`Cannot remove Power '${itemName}': ${validation.errors.join(', ')}`);
+        process.exit(1);
       }
-    }
 
-    try {
-      removeFile(targetPath);
-      const displayName = isSkill ? itemName : itemName + extension;
-      console.log();
-      printSuccess(`Removed ${highlight(displayName)} from ${targetConfig.label}`);
-      console.log();
-      p.outro(pc.green("✨ Done!"));
-    } catch (error) {
-      p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
-      process.exit(1);
+      // Show warnings if any
+      if (validation.warnings.length > 0 && !args.force) {
+        console.log();
+        console.log(pc.yellow("  Warnings:"));
+        validation.warnings.forEach(warning => {
+          console.log(pc.dim(`    • ${warning}`));
+        });
+        console.log();
+
+        const shouldContinue = await p.confirm({
+          message: `Are you sure you want to remove Power ${highlight(getPowerDisplayName(itemName))}?`,
+          initialValue: false,
+        });
+
+        if (p.isCancel(shouldContinue) || !shouldContinue) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+      }
+
+      try {
+        const result = await uninstallPowerWithErrorHandling(itemName);
+        
+        if (result.errors.length > 0) {
+          console.log();
+          console.log(pc.red("  Errors during removal:"));
+          result.errors.forEach(error => {
+            console.log(pc.dim(`    • ${error}`));
+          });
+        }
+
+        if (result.warnings.length > 0) {
+          console.log();
+          console.log(pc.yellow("  Warnings:"));
+          result.warnings.forEach(warning => {
+            console.log(pc.dim(`    • ${warning}`));
+          });
+        }
+
+        if (result.added.length > 0) {
+          console.log();
+          console.log(pc.green("  Removed components:"));
+          result.added.forEach(component => {
+            console.log(pc.dim(`    • ${component}`));
+          });
+        }
+
+        console.log();
+        printSuccess(`Removed Power ${highlight(getPowerDisplayName(itemName))}`);
+        console.log();
+        p.outro(pc.green("✨ Done!"));
+      } catch (error) {
+        p.cancel(`Error removing Power: ${error instanceof Error ? error.message : "Unknown error"}`);
+        process.exit(1);
+      }
+    } else {
+      // Handle regular file/directory removal
+      const targetPath = isSkill ? join(dir, itemName) : join(dir, `${itemName}${extension}`);
+      const exists = isSkill ? dirExists(targetPath) : fileExists(targetPath);
+
+      if (!exists) {
+        p.cancel(`${itemLabel} '${itemName}' not found`);
+        process.exit(1);
+      }
+
+      if (!args.force) {
+        const displayName = isSkill ? itemName : itemName + extension;
+        const shouldDelete = await p.confirm({
+          message: `Are you sure you want to delete ${highlight(displayName)}?${isSkill ? " (This will remove the entire skill directory)" : ""}`,
+          initialValue: false,
+        });
+
+        if (p.isCancel(shouldDelete) || !shouldDelete) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+      }
+
+      try {
+        removeFile(targetPath);
+        const displayName = isSkill ? itemName : itemName + extension;
+        console.log();
+        printSuccess(`Removed ${highlight(displayName)} from ${targetConfig.label}`);
+        console.log();
+        p.outro(pc.green("✨ Done!"));
+      } catch (error) {
+        p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+        process.exit(1);
+      }
     }
   },
 });

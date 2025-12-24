@@ -19,6 +19,13 @@ import {
   transformRuleForAntiGravity,
   transformTocContentForCursor,
 } from "../utils/templates";
+import {
+  getInstalledPowers,
+  installPowerFromLocal,
+  getPowerDisplayName,
+  validatePowerCompatibility,
+  listAvailablePowers,
+} from "../utils/power";
 
 async function convertPulledFilesForTarget(
   target: InstructionTarget,
@@ -78,10 +85,78 @@ async function convertPulledFilesForTarget(
   }
 }
 
+/**
+ * Updates all installed Powers to their latest versions
+ */
+async function updateInstalledPowers(spinner: any): Promise<void> {
+  const installedPowers = getInstalledPowers();
+  
+  if (installedPowers.length === 0) {
+    return;
+  }
+
+  spinner.start("Checking for Power updates...");
+  
+  try {
+    // Get available powers from local templates
+    const availablePowers = listAvailablePowers();
+    const updatesAvailable: Array<{ current: any; latest: any }> = [];
+    
+    // Check each installed Power for updates
+    for (const installedPower of installedPowers) {
+      const latestPower = availablePowers.find(p => p.name === installedPower.name);
+      
+      if (latestPower && latestPower.version !== installedPower.version) {
+        updatesAvailable.push({
+          current: installedPower,
+          latest: latestPower,
+        });
+      }
+    }
+    
+    if (updatesAvailable.length === 0) {
+      spinner.stop("All Powers are up to date");
+      return;
+    }
+    
+    spinner.stop(`Found ${updatesAvailable.length} Power update${updatesAvailable.length !== 1 ? 's' : ''}`);
+    
+    // Update each Power
+    for (const { current, latest } of updatesAvailable) {
+      spinner.start(`Updating ${getPowerDisplayName(current.name)} v${current.version} → v${latest.version}...`);
+      
+      try {
+        // Validate compatibility
+        const compatibility = validatePowerCompatibility(latest);
+        if (!compatibility.valid) {
+          spinner.stop(`Skipped ${current.name}: ${compatibility.errors.join(', ')}`);
+          continue;
+        }
+        
+        // Install from local templates
+        const updateResult = await installPowerFromLocal(latest.name, process.cwd());
+        
+        if (updateResult.errors.length > 0) {
+          spinner.stop(`Failed to update ${current.name}: ${updateResult.errors.join(', ')}`);
+          continue;
+        }
+        
+        spinner.stop(`Updated ${getPowerDisplayName(current.name)} to v${latest.version}`);
+        
+      } catch (error) {
+        spinner.stop(`Failed to update ${current.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+  } catch (error) {
+    spinner.stop(`Failed to check for updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export const pullCommand = defineCommand({
   meta: {
     name: "pull",
-    description: "Pull latest updates from cursor-kit repository",
+    description: "Pull latest updates from agent-kit repository and update installed Powers",
   },
   args: {
     commands: {
@@ -102,6 +177,12 @@ export const pullCommand = defineCommand({
       description: "Only pull skills",
       default: false,
     },
+    powers: {
+      type: "boolean",
+      alias: "p",
+      description: "Only update installed Powers to latest versions (Kiro only)",
+      default: false,
+    },
     force: {
       type: "boolean",
       alias: "f",
@@ -115,10 +196,11 @@ export const pullCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const pullAll = !args.commands && !args.rules && !args.skills;
+    const pullAll = !args.commands && !args.rules && !args.skills && !args.powers;
     const shouldPullCommands = pullAll || args.commands;
     const shouldPullRules = pullAll || args.rules;
     const shouldPullSkills = pullAll || args.skills;
+    const shouldUpdatePowers = pullAll || args.powers;
 
     p.intro(pc.bgCyan(pc.black(" cursor-kit pull ")));
 
@@ -142,8 +224,9 @@ export const pullCommand = defineCommand({
     const existingCommands = listFiles(commandsDir, ".md");
     const existingRules = listFiles(rulesDir, rulesExtension);
     const existingSkills = listDirs(skillsDir);
+    const existingPowers = getInstalledPowers();
     const hasExisting =
-      existingCommands.length > 0 || existingRules.length > 0 || existingSkills.length > 0;
+      existingCommands.length > 0 || existingRules.length > 0 || existingSkills.length > 0 || existingPowers.length > 0;
 
     console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
     console.log();
@@ -158,6 +241,9 @@ export const pullCommand = defineCommand({
       }
       if (existingSkills.length > 0) {
         console.log(pc.dim(`  Skills: ${existingSkills.length} directories`));
+      }
+      if (existingPowers.length > 0) {
+        console.log(pc.dim(`  Powers: ${existingPowers.length} installed`));
       }
       console.log();
 
@@ -208,6 +294,10 @@ export const pullCommand = defineCommand({
         s.stop("Skills updated");
       }
 
+      if (shouldUpdatePowers) {
+        await updateInstalledPowers(s);
+      }
+
       if (target !== "github-copilot") {
         s.start("Converting files for target...");
         await convertPulledFilesForTarget(target, directories);
@@ -243,6 +333,15 @@ export const pullCommand = defineCommand({
         printSuccess(
           `Skills: ${highlight(newSkills.length.toString())} total` +
             (added > 0 ? pc.green(` (+${added} new)`) : ""),
+        );
+      }
+
+      if (shouldUpdatePowers) {
+        const updatedPowers = getInstalledPowers();
+        const updated = updatedPowers.length - existingPowers.length;
+        printSuccess(
+          `Powers: ${highlight(updatedPowers.length.toString())} total` +
+            (updated !== 0 ? pc.green(` (${updated > 0 ? '+' : ''}${updated} changes)`) : ""),
         );
       }
 
