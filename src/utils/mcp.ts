@@ -71,14 +71,12 @@ export const MCP_SERVER_TEMPLATES: Record<string, McpServerTemplate> = {
   context7: {
     name: "context7",
     displayName: "Context7",
-    description: "Upstash Context7 MCP server for vector search and context management",
+    description: "Context7 MCP server for fetching up-to-date library documentation",
     config: {
       command: "npx",
       args: ["-y", "@upstash/context7-mcp"],
       env: {
         FASTMCP_LOG_LEVEL: "ERROR",
-        UPSTASH_VECTOR_REST_URL: "",
-        UPSTASH_VECTOR_REST_TOKEN: "",
       },
       disabled: false,
       autoApprove: [],
@@ -89,57 +87,49 @@ export const MCP_SERVER_TEMPLATES: Record<string, McpServerTemplate> = {
       args: ["-y", "@upstash/context7-mcp"],
       env: {
         FASTMCP_LOG_LEVEL: "ERROR",
-        UPSTASH_VECTOR_REST_URL: "${input:upstash-vector-url}",
-        UPSTASH_VECTOR_REST_TOKEN: "${input:upstash-vector-token}",
       },
     },
-    requiredInputs: [
-      {
-        envKey: "UPSTASH_VECTOR_REST_URL",
-        id: "upstash-vector-url",
-        description: "Upstash Vector REST URL",
-        password: false,
-      },
-      {
-        envKey: "UPSTASH_VECTOR_REST_TOKEN",
-        id: "upstash-vector-token",
-        description: "Upstash Vector REST Token",
-        password: true,
-      },
-    ],
     setupInstructions: `
 To use Context7 MCP server, you need to:
 
-1. Create an Upstash Vector database at https://console.upstash.com/vector
-2. Set the following environment variables:
-   - UPSTASH_VECTOR_REST_URL: Your vector database REST URL
-   - UPSTASH_VECTOR_REST_TOKEN: Your vector database REST token
+1. Ensure you have Node.js and npm installed for npx command
+2. The server will be automatically available after installation.
 
-3. Ensure you have Node.js and npm installed for npx command
-
-For more information, visit: https://github.com/upstash/context7
+For more information, visit: https://github.com/upstash/context7-mcp
     `.trim(),
   },
   serena: {
     name: "serena",
     displayName: "Serena",
-    description: "Serena MCP server for enhanced AI capabilities",
+    description:
+      "Serena MCP server - IDE-like semantic code retrieval and editing tools for AI coding agents",
     config: {
       command: "uvx",
-      args: ["serena-mcp"],
-      env: {
-        FASTMCP_LOG_LEVEL: "ERROR",
-      },
+      args: [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide",
+      ],
+      env: {},
       disabled: false,
       autoApprove: [],
     },
     vsCodeConfig: {
       type: "stdio",
       command: "uvx",
-      args: ["serena-mcp"],
-      env: {
-        FASTMCP_LOG_LEVEL: "ERROR",
-      },
+      args: [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project",
+        "${workspaceFolder}",
+      ],
     },
     setupInstructions: `
 To use Serena MCP server, you need to:
@@ -148,9 +138,17 @@ To use Serena MCP server, you need to:
    - Visit https://docs.astral.sh/uv/getting-started/installation/
    - Or use: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-2. The server will be automatically available after installation.
+2. The server will automatically download and run from GitHub.
 
-For more information, visit: https://github.com/oraios/serena
+3. Some language servers may require additional dependencies:
+   - See https://oraios.github.io/serena/01-about/020_programming-languages.html
+
+Serena provides semantic code retrieval and editing tools:
+- find_symbol, find_referencing_symbols
+- insert_after_symbol, replace_symbol_body
+- Supports 30+ programming languages via LSP
+
+For more information: https://oraios.github.io/serena/
     `.trim(),
   },
 };
