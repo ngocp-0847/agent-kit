@@ -129,6 +129,10 @@ export function getCopilotCommandsDir(cwd: string = process.cwd()): string {
   return join(getCopilotInstructionsDir(cwd), "commands");
 }
 
+export function getCopilotPromptsDir(cwd: string = process.cwd()): string {
+  return join(getGitHubDir(cwd), "prompts");
+}
+
 export function getCopilotRulesDir(cwd: string = process.cwd()): string {
   return join(getCopilotInstructionsDir(cwd), "rules");
 }

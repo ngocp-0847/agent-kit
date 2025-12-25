@@ -361,11 +361,12 @@ export function generateCopilotIndex(
   }
 
   if (commands.length > 0) {
-    output += "## Commands\n\n";
-    output += "When the user requests a command, read the corresponding file:\n\n";
+    output += "## Prompt Files\n\n";
+    output +=
+      "Prompt files are reusable prompts available via `/` command in chat. Use them by typing `/` followed by the prompt name:\n\n";
     for (const cmd of commands) {
-      const cmdName = cmd.replace(/\.md$/, "");
-      output += `- **${cmdName}**: Read \`.github/copilot-instructions/commands/${cmd}\` when user requests "${cmdName}"\n`;
+      const cmdName = cmd.replace(/\.prompt\.md$/, "");
+      output += `- **${cmdName}**: Type \`/${cmdName}\` in chat to use this prompt (file: \`.github/prompts/${cmd}\`)\n`;
     }
     output += "\n";
   }
@@ -394,7 +395,8 @@ export function generateCopilotIndex(
 
   output += "## Usage Guidelines\n\n";
   output += "- **Don't read all files at once** - Only read files relevant to the current task\n";
-  output += "- **Commands**: Read command files when the user explicitly requests that command\n";
+  output +=
+    "- **Prompt Files**: Type `/` in chat to see available prompts, then select one to use\n";
   output += "- **Rules**: Reference rules when they apply to the current coding task\n";
   output +=
     "- **Skills**: Skills in `.claude/skills/` are automatically discovered and used by GitHub Copilot\n";
