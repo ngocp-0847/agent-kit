@@ -48,3 +48,4 @@ yarn.lock
 # Github Copilot
 .github/copilot-instructions.md
 .github/copilot-instructions/
+.github/prompts/
