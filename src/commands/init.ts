@@ -24,6 +24,8 @@ import {
   writeFile,
 } from "../utils/fs";
 import {
+  MCP_SERVER_TEMPLATES,
+  getMcpConfigPath,
   getMcpServerSetupInstructions,
   installMcpServers,
   promptMcpServerSelection,
@@ -144,7 +146,20 @@ async function handleCopilotInstallation(
     }
   }
 
-  if (selectedCommands.length === 0 && selectedRules.length === 0 && selectedSkills.length === 0) {
+  // Prompt for MCP servers
+  let selectedMcpServers: string[] = [];
+  if (args.all) {
+    selectedMcpServers = Object.keys(MCP_SERVER_TEMPLATES);
+  } else {
+    const mcpSelection = await promptMcpServerSelection();
+    if (p.isCancel(mcpSelection)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+    selectedMcpServers = mcpSelection;
+  }
+
+  if (selectedCommands.length === 0 && selectedRules.length === 0 && selectedSkills.length === 0 && selectedMcpServers.length === 0) {
     p.cancel("No templates selected");
     process.exit(0);
   }
@@ -157,6 +172,14 @@ async function handleCopilotInstallation(
       selectedRules,
       selectedSkills,
     );
+    
+    // Install MCP servers
+    let mcpResult = { added: [] as string[], skipped: [] as string[] };
+    if (selectedMcpServers.length > 0) {
+      const mcpConfigPath = getMcpConfigPath("github-copilot", cwd);
+      mcpResult = installMcpServers(mcpConfigPath, selectedMcpServers, "github-copilot");
+    }
+    
     s.stop("GitHub Copilot instructions installed");
 
     printDivider();
@@ -181,6 +204,31 @@ async function handleCopilotInstallation(
       for (const skill of result.skills) {
         console.log(pc.dim(`   └─ ${pc.green("+")} ${skill}`));
       }
+    }
+
+    if (mcpResult.added.length > 0 || mcpResult.skipped.length > 0) {
+      printSuccess(
+        `MCP servers: ${highlight(mcpResult.added.length.toString())} added${
+          mcpResult.skipped.length > 0
+            ? `, ${pc.yellow(mcpResult.skipped.length.toString())} skipped`
+            : ""
+        }`,
+      );
+      for (const server of mcpResult.added) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${server}`));
+      }
+      for (const server of mcpResult.skipped) {
+        console.log(pc.dim(`   └─ ${pc.yellow("○")} ${server} (already exists)`));
+      }
+    }
+
+    // Show MCP setup instructions if servers were added
+    if (mcpResult.added.length > 0) {
+      console.log();
+      console.log(pc.cyan("📋 MCP Server Setup Instructions:"));
+      console.log();
+      const instructions = getMcpServerSetupInstructions(mcpResult.added);
+      console.log(pc.dim(instructions));
     }
 
     console.log();
