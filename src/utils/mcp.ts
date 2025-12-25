@@ -3,6 +3,10 @@ import * as p from "@clack/prompts";
 import type { InstructionTarget } from "../types/init";
 import { ensureDir, fileExists, readFile, writeFile } from "./fs";
 
+// ============================================
+// Standard MCP Config (Cursor, Kiro, etc.)
+// ============================================
+
 export interface McpServer {
   command: string;
   args: string[];
@@ -15,11 +19,50 @@ export interface McpConfig {
   mcpServers: Record<string, McpServer>;
 }
 
+// ============================================
+// VS Code MCP Config (GitHub Copilot)
+// ============================================
+
+export interface VsCodeMcpServer {
+  type: "stdio" | "http" | "sse";
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  envFile?: string;
+  url?: string;
+  headers?: Record<string, string>;
+}
+
+export interface VsCodeMcpInput {
+  type: "promptString";
+  id: string;
+  description: string;
+  password?: boolean;
+}
+
+export interface VsCodeMcpConfig {
+  servers: Record<string, VsCodeMcpServer>;
+  inputs?: VsCodeMcpInput[];
+}
+
+// ============================================
+// Server Template Definition
+// ============================================
+
 export interface McpServerTemplate {
   name: string;
   displayName: string;
   description: string;
   config: McpServer;
+  /** VS Code specific config with type field */
+  vsCodeConfig: VsCodeMcpServer;
+  /** Environment variables that require user input (for VS Code inputs) */
+  requiredInputs?: Array<{
+    envKey: string;
+    id: string;
+    description: string;
+    password?: boolean;
+  }>;
   setupInstructions?: string;
 }
 
@@ -30,17 +73,40 @@ export const MCP_SERVER_TEMPLATES: Record<string, McpServerTemplate> = {
     displayName: "Context7",
     description: "Upstash Context7 MCP server for vector search and context management",
     config: {
-      command: "npx -y @upstash/context7-mcp",
-      args: [],
+      command: "npx",
+      args: ["-y", "@upstash/context7-mcp"],
       env: {
         FASTMCP_LOG_LEVEL: "ERROR",
-        // Users need to set these environment variables
         UPSTASH_VECTOR_REST_URL: "",
         UPSTASH_VECTOR_REST_TOKEN: "",
       },
       disabled: false,
       autoApprove: [],
     },
+    vsCodeConfig: {
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@upstash/context7-mcp"],
+      env: {
+        FASTMCP_LOG_LEVEL: "ERROR",
+        UPSTASH_VECTOR_REST_URL: "${input:upstash-vector-url}",
+        UPSTASH_VECTOR_REST_TOKEN: "${input:upstash-vector-token}",
+      },
+    },
+    requiredInputs: [
+      {
+        envKey: "UPSTASH_VECTOR_REST_URL",
+        id: "upstash-vector-url",
+        description: "Upstash Vector REST URL",
+        password: false,
+      },
+      {
+        envKey: "UPSTASH_VECTOR_REST_TOKEN",
+        id: "upstash-vector-token",
+        description: "Upstash Vector REST Token",
+        password: true,
+      },
+    ],
     setupInstructions: `
 To use Context7 MCP server, you need to:
 
@@ -67,6 +133,14 @@ For more information, visit: https://github.com/upstash/context7
       disabled: false,
       autoApprove: [],
     },
+    vsCodeConfig: {
+      type: "stdio",
+      command: "uvx",
+      args: ["serena-mcp"],
+      env: {
+        FASTMCP_LOG_LEVEL: "ERROR",
+      },
+    },
     setupInstructions: `
 To use Serena MCP server, you need to:
 
@@ -90,7 +164,7 @@ export function getCursorMcpConfigPath(cwd: string = process.cwd()): string {
 }
 
 export function getCopilotMcpConfigPath(cwd: string = process.cwd()): string {
-  return join(cwd, ".vscode", "settings", "mcp.json");
+  return join(cwd, ".vscode", "mcp.json");
 }
 
 export function getAntiGravityMcpConfigPath(cwd: string = process.cwd()): string {
@@ -125,7 +199,25 @@ export function readMcpConfig(configPath: string): McpConfig | null {
   }
 }
 
+export function readVsCodeMcpConfig(configPath: string): VsCodeMcpConfig | null {
+  if (!fileExists(configPath)) {
+    return null;
+  }
+
+  try {
+    const content = readFile(configPath);
+    return JSON.parse(content) as VsCodeMcpConfig;
+  } catch {
+    return null;
+  }
+}
+
 export function writeMcpConfig(configPath: string, config: McpConfig): void {
+  ensureDir(join(configPath, ".."));
+  writeFile(configPath, JSON.stringify(config, null, 2));
+}
+
+export function writeVsCodeMcpConfig(configPath: string, config: VsCodeMcpConfig): void {
   ensureDir(join(configPath, ".."));
   writeFile(configPath, JSON.stringify(config, null, 2));
 }
@@ -138,6 +230,27 @@ export function mergeMcpConfig(existing: McpConfig | null, newServers: Record<st
       ...base.mcpServers,
       ...newServers,
     },
+  };
+}
+
+export function mergeVsCodeMcpConfig(
+  existing: VsCodeMcpConfig | null,
+  newServers: Record<string, VsCodeMcpServer>,
+  newInputs: VsCodeMcpInput[],
+): VsCodeMcpConfig {
+  const base: VsCodeMcpConfig = existing || { servers: {} };
+  const existingInputs = base.inputs || [];
+  
+  // Merge inputs, avoiding duplicates by id
+  const existingInputIds = new Set(existingInputs.map((input) => input.id));
+  const uniqueNewInputs = newInputs.filter((input) => !existingInputIds.has(input.id));
+  
+  return {
+    servers: {
+      ...base.servers,
+      ...newServers,
+    },
+    inputs: [...existingInputs, ...uniqueNewInputs],
   };
 }
 
@@ -194,12 +307,17 @@ export async function promptMcpServerSelection(): Promise<string[] | symbol> {
 export function installMcpServers(
   configPath: string,
   selectedServers: string[],
-  _target?: InstructionTarget,
+  target?: InstructionTarget,
 ): { added: string[]; skipped: string[] } {
   const result = { added: [] as string[], skipped: [] as string[] };
   
   if (selectedServers.length === 0) {
     return result;
+  }
+
+  // Use VS Code format for github-copilot target
+  if (target === "github-copilot") {
+    return installVsCodeMcpServers(configPath, selectedServers);
   }
 
   const existingConfig = readMcpConfig(configPath);
@@ -222,6 +340,59 @@ export function installMcpServers(
   if (Object.keys(newServers).length > 0) {
     const mergedConfig = mergeMcpConfig(existingConfig, newServers);
     writeMcpConfig(configPath, mergedConfig);
+  }
+
+  return result;
+}
+
+/**
+ * Install MCP servers using VS Code format (.vscode/mcp.json)
+ * This format uses "servers" instead of "mcpServers" and supports input variables
+ */
+export function installVsCodeMcpServers(
+  configPath: string,
+  selectedServers: string[],
+): { added: string[]; skipped: string[] } {
+  const result = { added: [] as string[], skipped: [] as string[] };
+  
+  if (selectedServers.length === 0) {
+    return result;
+  }
+
+  const existingConfig = readVsCodeMcpConfig(configPath);
+  const newServers: Record<string, VsCodeMcpServer> = {};
+  const newInputs: VsCodeMcpInput[] = [];
+
+  for (const serverName of selectedServers) {
+    const template = MCP_SERVER_TEMPLATES[serverName];
+    if (!template) continue;
+
+    // Check if server already exists
+    if (existingConfig?.servers[serverName]) {
+      result.skipped.push(serverName);
+      continue;
+    }
+
+    newServers[serverName] = template.vsCodeConfig;
+    
+    // Collect required inputs
+    if (template.requiredInputs) {
+      for (const input of template.requiredInputs) {
+        newInputs.push({
+          type: "promptString",
+          id: input.id,
+          description: input.description,
+          password: input.password,
+        });
+      }
+    }
+    
+    result.added.push(serverName);
+  }
+
+  if (Object.keys(newServers).length > 0) {
+    const mergedConfig = mergeVsCodeMcpConfig(existingConfig, newServers, newInputs);
+    writeVsCodeMcpConfig(configPath, mergedConfig);
   }
 
   return result;

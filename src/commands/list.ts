@@ -12,6 +12,7 @@ import {
   listFiles,
   readFile,
 } from "../utils/fs";
+import { MCP_SERVER_TEMPLATES } from "../utils/mcp";
 
 interface ItemInfo {
   name: string;
@@ -96,6 +97,12 @@ export const listCommand = defineCommand({
       description: "Only list skills",
       default: false,
     },
+    mcp: {
+      type: "boolean",
+      alias: "m",
+      description: "Only list MCP servers",
+      default: false,
+    },
     verbose: {
       type: "boolean",
       alias: "v",
@@ -104,10 +111,11 @@ export const listCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const listAll = !args.commands && !args.rules && !args.skills;
+    const listAll = !args.commands && !args.rules && !args.skills && !args.mcp;
     const shouldListCommands = listAll || args.commands;
     const shouldListRules = listAll || args.rules;
     const shouldListSkills = listAll || args.skills;
+    const shouldListMcp = listAll || args.mcp;
 
     p.intro(pc.bgCyan(pc.black(" cursor-kit list ")));
 
@@ -118,10 +126,15 @@ export const listCommand = defineCommand({
     const commands = shouldListCommands ? getItems(commandsDir, ".md", true) : [];
     const rules = shouldListRules ? getItems(rulesDir, ".mdc", false) : [];
     const skills = shouldListSkills ? getSkills(skillsDir) : [];
+    const mcpServers = shouldListMcp ? Object.entries(MCP_SERVER_TEMPLATES).map(([name, template]) => ({
+      name,
+      displayName: template.displayName,
+      description: template.description,
+    })) : [];
 
-    if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
+    if (commands.length === 0 && rules.length === 0 && skills.length === 0 && mcpServers.length === 0) {
       console.log();
-      console.log(pc.yellow("  No commands, rules, or skills found."));
+      console.log(pc.yellow("  No commands, rules, skills, or MCP servers found."));
       console.log(pc.dim("  Run ") + highlight("agent-kit init") + pc.dim(" to get started."));
       console.log();
       p.outro(pc.dim("Nothing to show"));
@@ -178,10 +191,23 @@ export const listCommand = defineCommand({
       });
     }
 
+    if (shouldListMcp && mcpServers.length > 0) {
+      console.log();
+      console.log(pc.bold(pc.cyan("  🔌 MCP Servers")) + pc.dim(` (${mcpServers.length})`));
+      console.log();
+
+      mcpServers.forEach((server) => {
+        console.log(`  ${pc.green("●")} ${highlight(server.displayName)} ${pc.dim(`(${server.name})`)}`);
+        if (server.description) {
+          console.log(pc.dim(`    ${server.description}`));
+        }
+      });
+    }
+
     console.log();
     printDivider();
 
-    const total = commands.length + rules.length + skills.length;
+    const total = commands.length + rules.length + skills.length + mcpServers.length;
     p.outro(pc.dim(`Total: ${total} item${total !== 1 ? "s" : ""}`));
   },
 });

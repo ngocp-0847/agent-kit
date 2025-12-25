@@ -10,6 +10,7 @@ import {
   installMcpServers,
   promptMcpServerSelection,
   readMcpConfig,
+  readVsCodeMcpConfig,
 } from "../utils/mcp";
 import { isValidTarget, promptTargetSelection } from "../utils/target";
 
@@ -87,9 +88,68 @@ export const mcpCommand = defineCommand({
     }
 
     if (args.status) {
+      console.log();
+      
+      // Use different config format for github-copilot (VS Code format)
+      if (target === "github-copilot") {
+        const config = readVsCodeMcpConfig(mcpConfigPath);
+        
+        if (!config || Object.keys(config.servers).length === 0) {
+          console.log(pc.yellow("No MCP servers configured"));
+          console.log();
+          p.outro("Use 'agent-kit mcp --add' to install MCP servers");
+          return;
+        }
+
+        console.log(pc.bold("Configured MCP Servers:"));
+        console.log(pc.dim(`(VS Code format: ${mcpConfigPath})`));
+        console.log();
+
+        for (const [name, serverConfig] of Object.entries(config.servers)) {
+          const template = MCP_SERVER_TEMPLATES[name];
+          
+          console.log(`${pc.cyan(template?.displayName || name)} (${name})`);
+          console.log(pc.dim(`  Type: ${serverConfig.type}`));
+          
+          if (serverConfig.command) {
+            const argsStr = serverConfig.args?.join(" ") || "";
+            console.log(pc.dim(`  Command: ${serverConfig.command} ${argsStr}`));
+          }
+          
+          if (serverConfig.url) {
+            console.log(pc.dim(`  URL: ${serverConfig.url}`));
+          }
+          
+          if (serverConfig.env && Object.keys(serverConfig.env).length > 0) {
+            console.log(pc.dim("  Environment variables:"));
+            for (const [key, value] of Object.entries(serverConfig.env)) {
+              const displayValue = value.startsWith("${input:") 
+                ? pc.cyan(value) 
+                : value || pc.yellow("<not set>");
+              console.log(pc.dim(`    ${key}: ${displayValue}`));
+            }
+          }
+          
+          console.log();
+        }
+        
+        // Show configured inputs
+        if (config.inputs && config.inputs.length > 0) {
+          console.log(pc.bold("Configured Input Variables:"));
+          for (const input of config.inputs) {
+            const passwordIndicator = input.password ? pc.yellow(" (password)") : "";
+            console.log(pc.dim(`  - ${input.id}: ${input.description}${passwordIndicator}`));
+          }
+          console.log();
+        }
+
+        p.outro("MCP server status displayed");
+        return;
+      }
+      
+      // Standard format for other targets
       const config = readMcpConfig(mcpConfigPath);
       
-      console.log();
       if (!config || Object.keys(config.mcpServers).length === 0) {
         console.log(pc.yellow("No MCP servers configured"));
         console.log();
