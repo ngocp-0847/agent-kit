@@ -49,6 +49,24 @@ export interface VsCodeMcpConfig {
 // Server Template Definition
 // ============================================
 
+export interface McpServerPromptOption {
+  value: string;
+  label: string;
+  hint?: string;
+}
+
+export interface McpServerPrompt {
+  id: string;
+  type: "select" | "multiselect";
+  message: string;
+  options: McpServerPromptOption[];
+  defaultValue?: string | string[];
+  /** Prefix for CLI args (e.g., "--browser" generates "--browser chrome") */
+  argPrefix?: string;
+  /** If true, each selected value becomes a separate arg pair */
+  multipleArgs?: boolean;
+}
+
 export interface McpServerTemplate {
   name: string;
   displayName: string;
@@ -64,6 +82,8 @@ export interface McpServerTemplate {
     password?: boolean;
   }>;
   setupInstructions?: string;
+  /** Custom prompts for server-specific options (browser, mode, capabilities) */
+  customPrompts?: McpServerPrompt[];
 }
 
 // Predefined MCP server templates
@@ -149,6 +169,163 @@ Serena provides semantic code retrieval and editing tools:
 - Supports 30+ programming languages via LSP
 
 For more information: https://oraios.github.io/serena/
+    `.trim(),
+  },
+  playwright: {
+    name: "playwright",
+    displayName: "Playwright",
+    description: "Browser automation via Playwright for web testing and interaction",
+    config: {
+      command: "npx",
+      args: ["@playwright/mcp@latest"],
+      env: {},
+      disabled: false,
+      autoApprove: [],
+    },
+    vsCodeConfig: {
+      type: "stdio",
+      command: "npx",
+      args: ["@playwright/mcp@latest"],
+    },
+    setupInstructions: `
+⚠️  REQUIREMENT: Node.js >= 18 is required for Playwright MCP.
+
+To use Playwright MCP server:
+
+1. Ensure you have Node.js 18+ installed:
+   node --version  # Should show v18.x.x or higher
+
+2. The server will be automatically available after installation.
+
+3. The browser will open in headed mode by default (you can see it).
+
+Playwright MCP provides browser automation tools:
+- browser_navigate, browser_click, browser_type
+- browser_fill_form, browser_snapshot, browser_take_screenshot
+- browser_tabs (list, create, close, select tabs)
+
+For more information: https://github.com/microsoft/playwright-mcp
+    `.trim(),
+    customPrompts: [
+      {
+        id: "browser",
+        type: "select",
+        message: "Select browser to use:",
+        options: [
+          { value: "chrome", label: "Chrome", hint: "Google Chrome (recommended)" },
+          { value: "chromium", label: "Chromium", hint: "Playwright's bundled Chromium" },
+          { value: "firefox", label: "Firefox", hint: "Mozilla Firefox" },
+          { value: "webkit", label: "WebKit", hint: "Safari's rendering engine" },
+          { value: "msedge", label: "Microsoft Edge", hint: "Chromium-based Edge" },
+        ],
+        defaultValue: "chrome",
+        argPrefix: "--browser",
+      },
+      {
+        id: "mode",
+        type: "select",
+        message: "Select browser mode:",
+        options: [
+          { value: "headed", label: "Headed", hint: "Browser window visible (default)" },
+          { value: "headless", label: "Headless", hint: "No visible browser window" },
+        ],
+        defaultValue: "headed",
+        argPrefix: "",
+      },
+      {
+        id: "capabilities",
+        type: "multiselect",
+        message: "Select additional capabilities:",
+        options: [
+          { value: "vision", label: "Vision", hint: "Enable screenshot and coordinate-based interactions" },
+          { value: "pdf", label: "PDF", hint: "Enable PDF generation" },
+          { value: "testing", label: "Testing", hint: "Enable test assertions (expect)" },
+          { value: "tracing", label: "Tracing", hint: "Enable Playwright tracing for debugging" },
+        ],
+        defaultValue: [],
+        argPrefix: "--caps",
+        multipleArgs: true,
+      },
+    ],
+  },
+  "playwright-headless": {
+    name: "playwright-headless",
+    displayName: "Playwright (Headless)",
+    description: "Headless browser automation with Playwright - no visible browser window",
+    config: {
+      command: "npx",
+      args: ["@playwright/mcp@latest", "--headless", "--browser", "chrome"],
+      env: {},
+      disabled: false,
+      autoApprove: [],
+    },
+    vsCodeConfig: {
+      type: "stdio",
+      command: "npx",
+      args: ["@playwright/mcp@latest", "--headless", "--browser", "chrome"],
+    },
+    setupInstructions: `
+⚠️  REQUIREMENT: Node.js >= 18 is required for Playwright MCP.
+
+Playwright Headless preset:
+- Runs Chrome in headless mode (no visible browser window)
+- Ideal for CI/CD pipelines and background automation
+
+For more information: https://github.com/microsoft/playwright-mcp
+    `.trim(),
+  },
+  "playwright-testing": {
+    name: "playwright-testing",
+    displayName: "Playwright (Testing)",
+    description: "Playwright with testing capabilities - includes expect assertions",
+    config: {
+      command: "npx",
+      args: ["@playwright/mcp@latest", "--browser", "chrome", "--caps", "testing"],
+      env: {},
+      disabled: false,
+      autoApprove: [],
+    },
+    vsCodeConfig: {
+      type: "stdio",
+      command: "npx",
+      args: ["@playwright/mcp@latest", "--browser", "chrome", "--caps", "testing"],
+    },
+    setupInstructions: `
+⚠️  REQUIREMENT: Node.js >= 18 is required for Playwright MCP.
+
+Playwright Testing preset:
+- Uses Chrome browser in headed mode
+- Includes testing capabilities (expect assertions)
+- Ideal for E2E testing workflows
+
+For more information: https://github.com/microsoft/playwright-mcp
+    `.trim(),
+  },
+  "playwright-vision": {
+    name: "playwright-vision",
+    displayName: "Playwright (Vision)",
+    description: "Playwright with vision capabilities - screenshot and coordinate-based interactions",
+    config: {
+      command: "npx",
+      args: ["@playwright/mcp@latest", "--browser", "chrome", "--caps", "vision"],
+      env: {},
+      disabled: false,
+      autoApprove: [],
+    },
+    vsCodeConfig: {
+      type: "stdio",
+      command: "npx",
+      args: ["@playwright/mcp@latest", "--browser", "chrome", "--caps", "vision"],
+    },
+    setupInstructions: `
+⚠️  REQUIREMENT: Node.js >= 18 is required for Playwright MCP.
+
+Playwright Vision preset:
+- Uses Chrome browser in headed mode
+- Includes vision capabilities (screenshots, coordinate-based clicks)
+- Useful when element selectors are unreliable
+
+For more information: https://github.com/microsoft/playwright-mcp
     `.trim(),
   },
 };
@@ -302,10 +479,88 @@ export async function promptMcpServerSelection(): Promise<string[] | symbol> {
   return selectedServers as string[] | symbol;
 }
 
+/**
+ * Prompt user for server-specific options defined in customPrompts
+ * Returns additional args to append to the server config
+ */
+export async function promptServerOptions(
+  serverName: string,
+): Promise<string[] | symbol> {
+  const template = MCP_SERVER_TEMPLATES[serverName];
+  if (!template?.customPrompts || template.customPrompts.length === 0) {
+    return [];
+  }
+
+  const additionalArgs: string[] = [];
+
+  for (const prompt of template.customPrompts) {
+    if (prompt.type === "select") {
+      const result = await p.select({
+        message: prompt.message,
+        options: prompt.options.map((opt) => ({
+          value: opt.value,
+          label: opt.label,
+          hint: opt.hint,
+        })),
+        initialValue: prompt.defaultValue as string | undefined,
+      });
+
+      if (p.isCancel(result)) {
+        return result;
+      }
+
+      // Handle special cases
+      if (prompt.id === "mode") {
+        // Only add --headless flag if headless mode selected
+        if (result === "headless") {
+          additionalArgs.push("--headless");
+        }
+        // headed mode is default, no flag needed
+      } else if (prompt.argPrefix && result) {
+        additionalArgs.push(prompt.argPrefix, result as string);
+      }
+    } else if (prompt.type === "multiselect") {
+      const result = await p.multiselect({
+        message: prompt.message,
+        options: prompt.options.map((opt) => ({
+          value: opt.value,
+          label: opt.label,
+          hint: opt.hint,
+        })),
+        initialValues: (prompt.defaultValue as string[]) || [],
+        required: false,
+      });
+
+      if (p.isCancel(result)) {
+        return result;
+      }
+
+      const selectedValues = result as string[];
+      if (selectedValues.length > 0 && prompt.argPrefix) {
+        if (prompt.multipleArgs) {
+          // Each value becomes a separate --caps value pair
+          for (const value of selectedValues) {
+            additionalArgs.push(prompt.argPrefix, value);
+          }
+        } else {
+          // All values as single comma-separated arg
+          additionalArgs.push(prompt.argPrefix, selectedValues.join(","));
+        }
+      }
+    }
+  }
+
+  return additionalArgs;
+}
+
+/** Store custom args for servers that have been configured via prompts */
+export type ServerCustomArgs = Record<string, string[]>;
+
 export function installMcpServers(
   configPath: string,
   selectedServers: string[],
   target?: InstructionTarget,
+  customArgs?: ServerCustomArgs,
 ): { added: string[]; skipped: string[] } {
   const result = { added: [] as string[], skipped: [] as string[] };
   
@@ -315,7 +570,7 @@ export function installMcpServers(
 
   // Use VS Code format for github-copilot target
   if (target === "github-copilot") {
-    return installVsCodeMcpServers(configPath, selectedServers);
+    return installVsCodeMcpServers(configPath, selectedServers, customArgs);
   }
 
   const existingConfig = readMcpConfig(configPath);
@@ -331,7 +586,13 @@ export function installMcpServers(
       continue;
     }
 
-    newServers[serverName] = template.config;
+    // Clone config and append custom args if provided
+    const serverConfig = { ...template.config };
+    if (customArgs?.[serverName]) {
+      serverConfig.args = [...template.config.args, ...customArgs[serverName]];
+    }
+
+    newServers[serverName] = serverConfig;
     result.added.push(serverName);
   }
 
@@ -350,6 +611,7 @@ export function installMcpServers(
 export function installVsCodeMcpServers(
   configPath: string,
   selectedServers: string[],
+  customArgs?: ServerCustomArgs,
 ): { added: string[]; skipped: string[] } {
   const result = { added: [] as string[], skipped: [] as string[] };
   
@@ -371,7 +633,13 @@ export function installVsCodeMcpServers(
       continue;
     }
 
-    newServers[serverName] = template.vsCodeConfig;
+    // Clone config and append custom args if provided
+    const serverConfig = { ...template.vsCodeConfig };
+    if (customArgs?.[serverName]) {
+      serverConfig.args = [...(template.vsCodeConfig.args || []), ...customArgs[serverName]];
+    }
+
+    newServers[serverName] = serverConfig;
     
     // Collect required inputs
     if (template.requiredInputs) {
