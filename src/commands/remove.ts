@@ -4,7 +4,19 @@ import { defineCommand } from "citty";
 import pc from "picocolors";
 import type { InstructionTarget } from "../types/init";
 import { highlight, printSuccess } from "../utils/branding";
-import { dirExists, fileExists, listDirs, listFiles, removeFile } from "../utils/fs";
+import {
+  dirExists,
+  fileExists,
+  getCopilotPromptsDir,
+  listDirs,
+  listFiles,
+  removeFile,
+} from "../utils/fs";
+import {
+  getConfiguredMcpServers,
+  getMcpConfigPath,
+  removeMcpServer,
+} from "../utils/mcp";
 import {
   getTargetConfig,
   getTargetDirectories,
@@ -12,7 +24,7 @@ import {
   promptTargetSelection,
 } from "../utils/target";
 
-type ItemType = "command" | "rule" | "skill";
+type ItemType = "command" | "rule" | "skill" | "mcp";
 
 interface SelectOption {
   value: string;
@@ -23,13 +35,13 @@ interface SelectOption {
 export const removeCommand = defineCommand({
   meta: {
     name: "remove",
-    description: "Remove a command, rule, or skill",
+    description: "Remove a command, rule, skill, or MCP server",
   },
   args: {
     type: {
       type: "string",
       alias: "t",
-      description: "Type: 'command', 'rule', or 'skill'",
+      description: "Type: 'command', 'rule', 'skill', or 'mcp'",
     },
     name: {
       type: "string",
@@ -62,23 +74,43 @@ export const removeCommand = defineCommand({
       target = selection;
     }
 
+    const cwd = process.cwd();
     const targetConfig = getTargetConfig(target);
-    const directories = getTargetDirectories(target);
+    const directories = getTargetDirectories(target, cwd);
     const { commandsDir, rulesDir, skillsDir } = directories;
 
     const rulesExtension = targetConfig.rulesExtension;
-    const commands = listFiles(commandsDir, ".md").map((f) => f.replace(".md", ""));
+    
+    // Get commands from standard commands directory
+    let commands = listFiles(commandsDir, ".md").map((f) => ({
+      name: f.replace(".md", ""),
+      path: join(commandsDir, f),
+      source: "commands" as const,
+    }));
+    
+    // For GitHub Copilot, also include prompt files from .github/prompts/
+    if (target === "github-copilot") {
+      const promptsDir = getCopilotPromptsDir(cwd);
+      const prompts = listFiles(promptsDir, ".prompt.md").map((f) => ({
+        name: f.replace(".prompt.md", ""),
+        path: join(promptsDir, f),
+        source: "prompts" as const,
+      }));
+      commands = [...commands, ...prompts];
+    }
+    
     const rules = listFiles(rulesDir, rulesExtension).map((f) => f.replace(rulesExtension, ""));
     const skills = listDirs(skillsDir);
+    const configuredMcpServers = getConfiguredMcpServers(target, cwd);
 
     console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
     console.log();
 
-    if (commands.length === 0 && rules.length === 0 && skills.length === 0) {
+    if (commands.length === 0 && rules.length === 0 && skills.length === 0 && configuredMcpServers.length === 0) {
       console.log();
       console.log(
         pc.yellow(
-          `  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, or skills to remove.`,
+          `  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, skills, or MCP servers to remove.`,
         ),
       );
       console.log();
@@ -89,7 +121,7 @@ export const removeCommand = defineCommand({
     let itemType: ItemType;
     let itemName: string;
 
-    if (args.type && ["command", "rule", "skill"].includes(args.type)) {
+    if (args.type && ["command", "rule", "skill", "mcp"].includes(args.type)) {
       itemType = args.type as ItemType;
     } else {
       const typeOptions: SelectOption[] = [];
@@ -118,6 +150,14 @@ export const removeCommand = defineCommand({
         });
       }
 
+      if (configuredMcpServers.length > 0) {
+        typeOptions.push({
+          value: "mcp",
+          label: "MCP Server",
+          hint: `${configuredMcpServers.length} configured`,
+        });
+      }
+
       const typeResult = await p.select({
         message: "What do you want to remove?",
         options: typeOptions,
@@ -131,13 +171,143 @@ export const removeCommand = defineCommand({
       itemType = typeResult as ItemType;
     }
 
+    // Handle MCP server removal separately
+    if (itemType === "mcp") {
+      if (configuredMcpServers.length === 0) {
+        p.cancel("No MCP servers configured");
+        process.exit(0);
+      }
+
+      if (args.name && configuredMcpServers.some((s) => s.name === args.name)) {
+        itemName = args.name;
+      } else {
+        const mcpOptions: SelectOption[] = configuredMcpServers.map((server) => ({
+          value: server.name,
+          label: server.name,
+        }));
+
+        const nameResult = await p.select({
+          message: "Select MCP server to remove:",
+          options: mcpOptions,
+        });
+
+        if (p.isCancel(nameResult)) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+
+        itemName = nameResult as string;
+      }
+
+      const mcpConfigPath = getMcpConfigPath(target, cwd);
+
+      if (!args.force) {
+        const shouldDelete = await p.confirm({
+          message: `Are you sure you want to remove MCP server ${highlight(itemName)}?\n  ${pc.dim(`Config: ${mcpConfigPath}`)}`,
+          initialValue: false,
+        });
+
+        if (p.isCancel(shouldDelete) || !shouldDelete) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+      }
+
+      try {
+        const removed = removeMcpServer(target, itemName, cwd);
+        if (!removed) {
+          p.cancel(`MCP server '${itemName}' not found in config`);
+          process.exit(1);
+        }
+        console.log();
+        printSuccess(`Removed MCP server ${highlight(itemName)} from ${targetConfig.label}`);
+        console.log(pc.dim(`  Config: ${mcpConfigPath}`));
+        console.log();
+        p.outro(pc.green("✨ Done!"));
+      } catch (error) {
+        p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+        process.exit(1);
+      }
+      return;
+    }
+
     const isCommand = itemType === "command";
     const isRule = itemType === "rule";
     const isSkill = itemType === "skill";
-    const items = isCommand ? commands : isRule ? rules : skills;
-    const dir = isCommand ? commandsDir : isRule ? rulesDir : skillsDir;
-    const extension = isCommand ? ".md" : isRule ? rulesExtension : "";
     const itemLabel = isCommand ? targetConfig.commandsLabel : itemType;
+
+    // Handle command removal with unified commands/prompts
+    if (isCommand) {
+      if (commands.length === 0) {
+        p.cancel(`No ${itemLabel}s found`);
+        process.exit(0);
+      }
+
+      let selectedCommand: typeof commands[0] | undefined;
+
+      if (args.name) {
+        selectedCommand = commands.find((c) => c.name === args.name);
+      }
+      
+      if (!selectedCommand) {
+        const commandOptions: SelectOption[] = commands.map((cmd) => ({
+          value: cmd.name,
+          label: cmd.name,
+          hint: cmd.source === "prompts" ? "prompt file" : undefined,
+        }));
+
+        const nameResult = await p.select({
+          message: `Select ${itemLabel} to remove:`,
+          options: commandOptions,
+        });
+
+        if (p.isCancel(nameResult)) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+
+        selectedCommand = commands.find((c) => c.name === nameResult);
+      }
+
+      if (!selectedCommand || !fileExists(selectedCommand.path)) {
+        p.cancel(`${itemLabel} '${args.name || "selected"}' not found`);
+        process.exit(1);
+      }
+
+      const displayName = selectedCommand.source === "prompts" 
+        ? `${selectedCommand.name}.prompt.md`
+        : `${selectedCommand.name}.md`;
+
+      if (!args.force) {
+        const shouldDelete = await p.confirm({
+          message: `Are you sure you want to delete ${highlight(displayName)}?\n  ${pc.dim(`Path: ${selectedCommand.path}`)}`,
+          initialValue: false,
+        });
+
+        if (p.isCancel(shouldDelete) || !shouldDelete) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+      }
+
+      try {
+        removeFile(selectedCommand.path);
+        console.log();
+        printSuccess(`Removed ${highlight(displayName)} from ${targetConfig.label}`);
+        console.log(pc.dim(`  Path: ${selectedCommand.path}`));
+        console.log();
+        p.outro(pc.green("✨ Done!"));
+      } catch (error) {
+        p.cancel(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+        process.exit(1);
+      }
+      return;
+    }
+
+    // Handle rules and skills
+    const items = isRule ? rules : skills;
+    const dir = isRule ? rulesDir : skillsDir;
+    const extension = isRule ? rulesExtension : "";
 
     if (items.length === 0) {
       p.cancel(`No ${itemLabel}s found`);
@@ -177,7 +347,7 @@ export const removeCommand = defineCommand({
     if (!args.force) {
       const displayName = isSkill ? itemName : itemName + extension;
       const shouldDelete = await p.confirm({
-        message: `Are you sure you want to delete ${highlight(displayName)}?${isSkill ? " (This will remove the entire skill directory)" : ""}`,
+        message: `Are you sure you want to delete ${highlight(displayName)}?${isSkill ? " (This will remove the entire skill directory)" : ""}\n  ${pc.dim(`Path: ${targetPath}`)}`,
         initialValue: false,
       });
 
@@ -192,6 +362,7 @@ export const removeCommand = defineCommand({
       const displayName = isSkill ? itemName : itemName + extension;
       console.log();
       printSuccess(`Removed ${highlight(displayName)} from ${targetConfig.label}`);
+      console.log(pc.dim(`  Path: ${targetPath}`));
       console.log();
       p.outro(pc.green("✨ Done!"));
     } catch (error) {

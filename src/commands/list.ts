@@ -12,7 +12,7 @@ import {
   listFiles,
   readFile,
 } from "../utils/fs";
-import { MCP_SERVER_TEMPLATES } from "../utils/mcp";
+import { getConfiguredMcpServers, MCP_SERVER_TEMPLATES } from "../utils/mcp";
 
 interface ItemInfo {
   name: string;
@@ -193,7 +193,7 @@ export const listCommand = defineCommand({
 
     if (shouldListMcp && mcpServers.length > 0) {
       console.log();
-      console.log(pc.bold(pc.cyan("  🔌 MCP Servers")) + pc.dim(` (${mcpServers.length})`));
+      console.log(pc.bold(pc.cyan("  🔌 MCP Servers (Available Templates)")) + pc.dim(` (${mcpServers.length})`));
       console.log();
 
       mcpServers.forEach((server) => {
@@ -202,6 +202,27 @@ export const listCommand = defineCommand({
           console.log(pc.dim(`    ${server.description}`));
         }
       });
+      
+      // Show configured servers in verbose mode
+      if (args.verbose) {
+        // Check for configured servers in common targets
+        const targets = ["cursor", "github-copilot", "kiro", "google-antigravity"] as const;
+        const cwd = process.cwd();
+        
+        for (const target of targets) {
+          const configured = getConfiguredMcpServers(target, cwd);
+          if (configured.length > 0) {
+            console.log();
+            console.log(pc.bold(pc.cyan(`  🔧 Configured (${target})`)) + pc.dim(` (${configured.length})`));
+            console.log();
+            
+            configured.forEach((server) => {
+              console.log(`  ${pc.blue("●")} ${highlight(server.name)}`);
+              console.log(pc.dim(`    ${server.configPath}`));
+            });
+          }
+        }
+      }
     }
 
     console.log();

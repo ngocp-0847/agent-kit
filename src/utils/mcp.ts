@@ -677,3 +677,57 @@ export function getMcpServerSetupInstructions(serverNames: string[]): string {
 
   return instructions;
 }
+
+export interface ConfiguredMcpServer {
+  name: string;
+  configPath: string;
+}
+
+/**
+ * Get list of configured MCP servers from the config file
+ * Handles both VS Code format (github-copilot) and standard format (cursor, kiro, etc.)
+ */
+export function getConfiguredMcpServers(
+  target: InstructionTarget,
+  cwd: string = process.cwd(),
+): ConfiguredMcpServer[] {
+  const configPath = getMcpConfigPath(target, cwd);
+  
+  if (target === "github-copilot") {
+    const config = readVsCodeMcpConfig(configPath);
+    if (!config?.servers) return [];
+    return Object.keys(config.servers).map((name) => ({ name, configPath }));
+  }
+  
+  const config = readMcpConfig(configPath);
+  if (!config?.mcpServers) return [];
+  return Object.keys(config.mcpServers).map((name) => ({ name, configPath }));
+}
+
+/**
+ * Remove an MCP server from the config file
+ * Leaves empty structure to preserve file for future additions
+ */
+export function removeMcpServer(
+  target: InstructionTarget,
+  serverName: string,
+  cwd: string = process.cwd(),
+): boolean {
+  const configPath = getMcpConfigPath(target, cwd);
+  
+  if (target === "github-copilot") {
+    const config = readVsCodeMcpConfig(configPath);
+    if (!config?.servers[serverName]) return false;
+    
+    delete config.servers[serverName];
+    writeVsCodeMcpConfig(configPath, config);
+    return true;
+  }
+  
+  const config = readMcpConfig(configPath);
+  if (!config?.mcpServers[serverName]) return false;
+  
+  delete config.mcpServers[serverName];
+  writeMcpConfig(configPath, config);
+  return true;
+}
