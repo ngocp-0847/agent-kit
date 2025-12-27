@@ -5,10 +5,12 @@ import type { InstructionTarget } from "../types/init";
 import { highlight, printDivider, printSuccess } from "../utils/branding";
 import {
   MCP_SERVER_TEMPLATES,
+  type ServerCustomArgs,
   getMcpConfigPath,
   getMcpServerSetupInstructions,
   installMcpServers,
   promptMcpServerSelection,
+  promptServerOptions,
   readMcpConfig,
   readVsCodeMcpConfig,
 } from "../utils/mcp";
@@ -227,11 +229,31 @@ export const mcpCommand = defineCommand({
         return;
       }
 
+      // Collect custom args for servers that have customPrompts
+      const customArgs: ServerCustomArgs = {};
+      for (const serverName of selectedServers) {
+        const template = MCP_SERVER_TEMPLATES[serverName];
+        if (template?.customPrompts && template.customPrompts.length > 0) {
+          console.log();
+          console.log(pc.cyan(`Configure ${template.displayName}:`));
+          
+          const serverArgs = await promptServerOptions(serverName);
+          if (p.isCancel(serverArgs)) {
+            p.cancel("Operation cancelled");
+            process.exit(0);
+          }
+          
+          if (serverArgs.length > 0) {
+            customArgs[serverName] = serverArgs;
+          }
+        }
+      }
+
       const s = p.spinner();
       
       try {
         s.start("Installing MCP servers...");
-        const result = installMcpServers(mcpConfigPath, selectedServers, target);
+        const result = installMcpServers(mcpConfigPath, selectedServers, target, customArgs);
         s.stop("MCP servers installed");
 
         printDivider();
