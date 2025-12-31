@@ -138,7 +138,7 @@ export function getCopilotRulesDir(cwd: string = process.cwd()): string {
 }
 
 export function getCopilotSkillsDir(cwd: string = process.cwd()): string {
-  return join(cwd, ".claude", "skills");
+  return join(getGitHubDir(cwd), "skills");
 }
 
 export function deleteFile(path: string): void {
