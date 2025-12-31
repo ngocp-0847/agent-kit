@@ -12,12 +12,30 @@ import {
   listFiles,
   readFile,
 } from "../utils/fs";
-import { getConfiguredMcpServers, MCP_SERVER_TEMPLATES } from "../utils/mcp";
+import { MCP_SERVER_TEMPLATES, getConfiguredMcpServers } from "../utils/mcp";
+import {
+  getInstalledPowers,
+  getPowerComponentInfo,
+  getPowerDescription,
+  getPowerDisplayName,
+} from "../utils/power";
 
 interface ItemInfo {
   name: string;
   path: string;
   description?: string;
+}
+
+interface PowerItemInfo {
+  name: string;
+  displayName: string;
+  version: string;
+  description?: string;
+  componentCount: {
+    mcpServers: number;
+    steeringFiles: number;
+    examples: number;
+  };
 }
 
 function extractDescription(content: string, isCommand: boolean): string | undefined {
@@ -44,6 +62,27 @@ function getItems(dir: string, extension: string, isCommand: boolean): ItemInfo[
       name: file.replace(extension, ""),
       path: filePath,
       description: extractDescription(content, isCommand),
+    };
+  });
+}
+
+function getPowers(cwd: string = process.cwd()): PowerItemInfo[] {
+  const installedPowers = getInstalledPowers(cwd);
+
+  return installedPowers.map((power) => {
+    const displayName = getPowerDisplayName(power.name, cwd);
+    const description = getPowerDescription(power.name, cwd);
+
+    return {
+      name: power.name,
+      displayName,
+      version: power.version,
+      description,
+      componentCount: {
+        mcpServers: power.components.mcpServers.length,
+        steeringFiles: power.components.steeringFiles.length,
+        examples: 0, // Not tracked in current implementation
+      },
     };
   });
 }
@@ -76,7 +115,7 @@ function getSkills(dir: string): ItemInfo[] {
 export const listCommand = defineCommand({
   meta: {
     name: "list",
-    description: "List all commands, rules, and skills",
+    description: "List all commands, rules, skills, and powers in your project",
   },
   args: {
     commands: {
@@ -97,6 +136,12 @@ export const listCommand = defineCommand({
       description: "Only list skills",
       default: false,
     },
+    powers: {
+      type: "boolean",
+      alias: "p",
+      description: "Only list installed Powers (Kiro)",
+      default: false,
+    },
     mcp: {
       type: "boolean",
       alias: "m",
@@ -111,10 +156,11 @@ export const listCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const listAll = !args.commands && !args.rules && !args.skills && !args.mcp;
+    const listAll = !args.commands && !args.rules && !args.skills && !args.powers && !args.mcp;
     const shouldListCommands = listAll || args.commands;
     const shouldListRules = listAll || args.rules;
     const shouldListSkills = listAll || args.skills;
+    const shouldListPowers = listAll || args.powers;
     const shouldListMcp = listAll || args.mcp;
 
     p.intro(pc.bgCyan(pc.black(" cursor-kit list ")));
@@ -126,15 +172,24 @@ export const listCommand = defineCommand({
     const commands = shouldListCommands ? getItems(commandsDir, ".md", true) : [];
     const rules = shouldListRules ? getItems(rulesDir, ".mdc", false) : [];
     const skills = shouldListSkills ? getSkills(skillsDir) : [];
-    const mcpServers = shouldListMcp ? Object.entries(MCP_SERVER_TEMPLATES).map(([name, template]) => ({
-      name,
-      displayName: template.displayName,
-      description: template.description,
-    })) : [];
+    const powers = shouldListPowers ? getPowers() : [];
+    const mcpServers = shouldListMcp
+      ? Object.entries(MCP_SERVER_TEMPLATES).map(([name, template]) => ({
+          name,
+          displayName: template.displayName,
+          description: template.description,
+        }))
+      : [];
 
-    if (commands.length === 0 && rules.length === 0 && skills.length === 0 && mcpServers.length === 0) {
+    if (
+      commands.length === 0 &&
+      rules.length === 0 &&
+      skills.length === 0 &&
+      powers.length === 0 &&
+      mcpServers.length === 0
+    ) {
       console.log();
-      console.log(pc.yellow("  No commands, rules, skills, or MCP servers found."));
+      console.log(pc.yellow("  No commands, rules, skills, powers, or MCP servers found."));
       console.log(pc.dim("  Run ") + highlight("agent-kit init") + pc.dim(" to get started."));
       console.log();
       p.outro(pc.dim("Nothing to show"));
@@ -191,31 +246,79 @@ export const listCommand = defineCommand({
       });
     }
 
+    if (shouldListPowers && powers.length > 0) {
+      console.log();
+      console.log(pc.bold(pc.cyan("  ⚡ Powers")) + pc.dim(` (${powers.length})`));
+      console.log();
+
+      powers.forEach((power) => {
+        console.log(
+          `  ${pc.green("●")} ${highlight(power.displayName)} ${pc.dim(`v${power.version}`)}`,
+        );
+        if (power.description) {
+          console.log(pc.dim(`    ${power.description}`));
+        }
+
+        // Show component counts
+        const components = [];
+        if (power.componentCount.mcpServers > 0) {
+          components.push(
+            `${power.componentCount.mcpServers} MCP server${power.componentCount.mcpServers !== 1 ? "s" : ""}`,
+          );
+        }
+        if (power.componentCount.steeringFiles > 0) {
+          components.push(
+            `${power.componentCount.steeringFiles} steering file${power.componentCount.steeringFiles !== 1 ? "s" : ""}`,
+          );
+        }
+        if (power.componentCount.examples > 0) {
+          components.push(
+            `${power.componentCount.examples} example${power.componentCount.examples !== 1 ? "s" : ""}`,
+          );
+        }
+
+        if (components.length > 0) {
+          console.log(pc.dim(`    Components: ${components.join(", ")}`));
+        }
+
+        if (args.verbose) {
+          console.log(pc.dim(`    Name: ${power.name}`));
+        }
+      });
+    }
+
     if (shouldListMcp && mcpServers.length > 0) {
       console.log();
-      console.log(pc.bold(pc.cyan("  🔌 MCP Servers (Available Templates)")) + pc.dim(` (${mcpServers.length})`));
+      console.log(
+        pc.bold(pc.cyan("  🔌 MCP Servers (Available Templates)")) +
+          pc.dim(` (${mcpServers.length})`),
+      );
       console.log();
 
       mcpServers.forEach((server) => {
-        console.log(`  ${pc.green("●")} ${highlight(server.displayName)} ${pc.dim(`(${server.name})`)}`);
+        console.log(
+          `  ${pc.green("●")} ${highlight(server.displayName)} ${pc.dim(`(${server.name})`)}`,
+        );
         if (server.description) {
           console.log(pc.dim(`    ${server.description}`));
         }
       });
-      
+
       // Show configured servers in verbose mode
       if (args.verbose) {
         // Check for configured servers in common targets
         const targets = ["cursor", "github-copilot", "kiro", "google-antigravity"] as const;
         const cwd = process.cwd();
-        
+
         for (const target of targets) {
           const configured = getConfiguredMcpServers(target, cwd);
           if (configured.length > 0) {
             console.log();
-            console.log(pc.bold(pc.cyan(`  🔧 Configured (${target})`)) + pc.dim(` (${configured.length})`));
+            console.log(
+              pc.bold(pc.cyan(`  🔧 Configured (${target})`)) + pc.dim(` (${configured.length})`),
+            );
             console.log();
-            
+
             configured.forEach((server) => {
               console.log(`  ${pc.blue("●")} ${highlight(server.name)}`);
               console.log(pc.dim(`    ${server.configPath}`));
@@ -228,7 +331,8 @@ export const listCommand = defineCommand({
     console.log();
     printDivider();
 
-    const total = commands.length + rules.length + skills.length + mcpServers.length;
+    const total =
+      commands.length + rules.length + skills.length + powers.length + mcpServers.length;
     p.outro(pc.dim(`Total: ${total} item${total !== 1 ? "s" : ""}`));
   },
 });

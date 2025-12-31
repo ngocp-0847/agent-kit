@@ -237,7 +237,11 @@ For more information: https://github.com/microsoft/playwright-mcp
         type: "multiselect",
         message: "Select additional capabilities:",
         options: [
-          { value: "vision", label: "Vision", hint: "Enable screenshot and coordinate-based interactions" },
+          {
+            value: "vision",
+            label: "Vision",
+            hint: "Enable screenshot and coordinate-based interactions",
+          },
           { value: "pdf", label: "PDF", hint: "Enable PDF generation" },
           { value: "testing", label: "Testing", hint: "Enable test assertions (expect)" },
           { value: "tracing", label: "Tracing", hint: "Enable Playwright tracing for debugging" },
@@ -304,7 +308,8 @@ For more information: https://github.com/microsoft/playwright-mcp
   "playwright-vision": {
     name: "playwright-vision",
     displayName: "Playwright (Vision)",
-    description: "Playwright with vision capabilities - screenshot and coordinate-based interactions",
+    description:
+      "Playwright with vision capabilities - screenshot and coordinate-based interactions",
     config: {
       command: "npx",
       args: ["@playwright/mcp@latest", "--browser", "chrome", "--caps", "vision"],
@@ -397,9 +402,12 @@ export function writeVsCodeMcpConfig(configPath: string, config: VsCodeMcpConfig
   writeFile(configPath, JSON.stringify(config, null, 2));
 }
 
-export function mergeMcpConfig(existing: McpConfig | null, newServers: Record<string, McpServer>): McpConfig {
+export function mergeMcpConfig(
+  existing: McpConfig | null,
+  newServers: Record<string, McpServer>,
+): McpConfig {
   const base: McpConfig = existing || { mcpServers: {} };
-  
+
   return {
     mcpServers: {
       ...base.mcpServers,
@@ -415,11 +423,11 @@ export function mergeVsCodeMcpConfig(
 ): VsCodeMcpConfig {
   const base: VsCodeMcpConfig = existing || { servers: {} };
   const existingInputs = base.inputs || [];
-  
+
   // Merge inputs, avoiding duplicates by id
   const existingInputIds = new Set(existingInputs.map((input) => input.id));
   const uniqueNewInputs = newInputs.filter((input) => !existingInputIds.has(input.id));
-  
+
   return {
     servers: {
       ...base.servers,
@@ -431,7 +439,7 @@ export function mergeVsCodeMcpConfig(
 
 export async function promptMcpServerSelection(): Promise<string[] | symbol> {
   const availableServers = Object.keys(MCP_SERVER_TEMPLATES);
-  
+
   const selectionMode = await p.select({
     message: "How would you like to add MCP servers?",
     options: [
@@ -483,9 +491,7 @@ export async function promptMcpServerSelection(): Promise<string[] | symbol> {
  * Prompt user for server-specific options defined in customPrompts
  * Returns additional args to append to the server config
  */
-export async function promptServerOptions(
-  serverName: string,
-): Promise<string[] | symbol> {
+export async function promptServerOptions(serverName: string): Promise<string[] | symbol> {
   const template = MCP_SERVER_TEMPLATES[serverName];
   if (!template?.customPrompts || template.customPrompts.length === 0) {
     return [];
@@ -563,7 +569,7 @@ export function installMcpServers(
   customArgs?: ServerCustomArgs,
 ): { added: string[]; skipped: string[] } {
   const result = { added: [] as string[], skipped: [] as string[] };
-  
+
   if (selectedServers.length === 0) {
     return result;
   }
@@ -614,7 +620,7 @@ export function installVsCodeMcpServers(
   customArgs?: ServerCustomArgs,
 ): { added: string[]; skipped: string[] } {
   const result = { added: [] as string[], skipped: [] as string[] };
-  
+
   if (selectedServers.length === 0) {
     return result;
   }
@@ -640,7 +646,7 @@ export function installVsCodeMcpServers(
     }
 
     newServers[serverName] = serverConfig;
-    
+
     // Collect required inputs
     if (template.requiredInputs) {
       for (const input of template.requiredInputs) {
@@ -652,7 +658,7 @@ export function installVsCodeMcpServers(
         });
       }
     }
-    
+
     result.added.push(serverName);
   }
 
@@ -666,7 +672,7 @@ export function installVsCodeMcpServers(
 
 export function getMcpServerSetupInstructions(serverNames: string[]): string {
   let instructions = "# MCP Server Setup Instructions\n\n";
-  
+
   for (const serverName of serverNames) {
     const template = MCP_SERVER_TEMPLATES[serverName];
     if (template?.setupInstructions) {
@@ -692,13 +698,13 @@ export function getConfiguredMcpServers(
   cwd: string = process.cwd(),
 ): ConfiguredMcpServer[] {
   const configPath = getMcpConfigPath(target, cwd);
-  
+
   if (target === "github-copilot") {
     const config = readVsCodeMcpConfig(configPath);
     if (!config?.servers) return [];
     return Object.keys(config.servers).map((name) => ({ name, configPath }));
   }
-  
+
   const config = readMcpConfig(configPath);
   if (!config?.mcpServers) return [];
   return Object.keys(config.mcpServers).map((name) => ({ name, configPath }));
@@ -714,19 +720,19 @@ export function removeMcpServer(
   cwd: string = process.cwd(),
 ): boolean {
   const configPath = getMcpConfigPath(target, cwd);
-  
+
   if (target === "github-copilot") {
     const config = readVsCodeMcpConfig(configPath);
     if (!config?.servers[serverName]) return false;
-    
+
     delete config.servers[serverName];
     writeVsCodeMcpConfig(configPath, config);
     return true;
   }
-  
+
   const config = readMcpConfig(configPath);
   if (!config?.mcpServers[serverName]) return false;
-  
+
   delete config.mcpServers[serverName];
   writeMcpConfig(configPath, config);
   return true;

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "nestjs-scanner": {
+      "command": "node",
+      "args": ["./servers/nestjs-scanner.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

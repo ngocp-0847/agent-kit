@@ -12,11 +12,14 @@ import {
   listFiles,
   removeFile,
 } from "../utils/fs";
+import { getConfiguredMcpServers, getMcpConfigPath, removeMcpServer } from "../utils/mcp";
 import {
-  getConfiguredMcpServers,
-  getMcpConfigPath,
-  removeMcpServer,
-} from "../utils/mcp";
+  getInstalledPowers,
+  getPowerDisplayName,
+  uninstallPower,
+  uninstallPowerWithErrorHandling,
+  validatePowerRemoval,
+} from "../utils/power";
 import {
   getTargetConfig,
   getTargetDirectories,
@@ -24,7 +27,7 @@ import {
   promptTargetSelection,
 } from "../utils/target";
 
-type ItemType = "command" | "rule" | "skill" | "mcp";
+type ItemType = "command" | "rule" | "skill" | "power" | "mcp";
 
 interface SelectOption {
   value: string;
@@ -35,13 +38,13 @@ interface SelectOption {
 export const removeCommand = defineCommand({
   meta: {
     name: "remove",
-    description: "Remove a command, rule, skill, or MCP server",
+    description: "Remove a command, rule, skill, MCP server, or power from your project",
   },
   args: {
     type: {
       type: "string",
       alias: "t",
-      description: "Type: 'command', 'rule', 'skill', or 'mcp'",
+      description: "Type: 'command', 'rule', 'skill', 'mcp' or 'power'",
     },
     name: {
       type: "string",
@@ -80,14 +83,14 @@ export const removeCommand = defineCommand({
     const { commandsDir, rulesDir, skillsDir } = directories;
 
     const rulesExtension = targetConfig.rulesExtension;
-    
+
     // Get commands from standard commands directory
     let commands = listFiles(commandsDir, ".md").map((f) => ({
       name: f.replace(".md", ""),
       path: join(commandsDir, f),
       source: "commands" as const,
     }));
-    
+
     // For GitHub Copilot, also include prompt files from .github/prompts/
     if (target === "github-copilot") {
       const promptsDir = getCopilotPromptsDir(cwd);
@@ -98,19 +101,26 @@ export const removeCommand = defineCommand({
       }));
       commands = [...commands, ...prompts];
     }
-    
+
     const rules = listFiles(rulesDir, rulesExtension).map((f) => f.replace(rulesExtension, ""));
     const skills = listDirs(skillsDir);
+    const powers = getInstalledPowers().map((p) => p.name);
     const configuredMcpServers = getConfiguredMcpServers(target, cwd);
 
     console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
     console.log();
 
-    if (commands.length === 0 && rules.length === 0 && skills.length === 0 && configuredMcpServers.length === 0) {
+    if (
+      commands.length === 0 &&
+      rules.length === 0 &&
+      skills.length === 0 &&
+      powers.length === 0 &&
+      configuredMcpServers.length === 0
+    ) {
       console.log();
       console.log(
         pc.yellow(
-          `  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, skills, or MCP servers to remove.`,
+          `  No ${targetConfig.commandsLabel}, ${targetConfig.rulesLabel}, skills, powers, or MCP servers to remove.`,
         ),
       );
       console.log();
@@ -121,7 +131,7 @@ export const removeCommand = defineCommand({
     let itemType: ItemType;
     let itemName: string;
 
-    if (args.type && ["command", "rule", "skill", "mcp"].includes(args.type)) {
+    if (args.type && ["command", "rule", "skill", "power", "mcp"].includes(args.type)) {
       itemType = args.type as ItemType;
     } else {
       const typeOptions: SelectOption[] = [];
@@ -147,6 +157,14 @@ export const removeCommand = defineCommand({
           value: "skill",
           label: "Skill",
           hint: `${skills.length} available`,
+        });
+      }
+
+      if (powers.length > 0) {
+        typeOptions.push({
+          value: "power",
+          label: "Power",
+          hint: `${powers.length} available`,
         });
       }
 
@@ -234,6 +252,7 @@ export const removeCommand = defineCommand({
     const isCommand = itemType === "command";
     const isRule = itemType === "rule";
     const isSkill = itemType === "skill";
+    const isPower = itemType === "power";
     const itemLabel = isCommand ? targetConfig.commandsLabel : itemType;
 
     // Handle command removal with unified commands/prompts
@@ -243,12 +262,12 @@ export const removeCommand = defineCommand({
         process.exit(0);
       }
 
-      let selectedCommand: typeof commands[0] | undefined;
+      let selectedCommand: (typeof commands)[0] | undefined;
 
       if (args.name) {
         selectedCommand = commands.find((c) => c.name === args.name);
       }
-      
+
       if (!selectedCommand) {
         const commandOptions: SelectOption[] = commands.map((cmd) => ({
           value: cmd.name,
@@ -274,9 +293,10 @@ export const removeCommand = defineCommand({
         process.exit(1);
       }
 
-      const displayName = selectedCommand.source === "prompts" 
-        ? `${selectedCommand.name}.prompt.md`
-        : `${selectedCommand.name}.md`;
+      const displayName =
+        selectedCommand.source === "prompts"
+          ? `${selectedCommand.name}.prompt.md`
+          : `${selectedCommand.name}.md`;
 
       if (!args.force) {
         const shouldDelete = await p.confirm({
@@ -317,10 +337,19 @@ export const removeCommand = defineCommand({
     if (args.name && items.includes(args.name)) {
       itemName = args.name;
     } else {
-      const itemOptions: SelectOption[] = items.map((item) => ({
-        value: item,
-        label: item,
-      }));
+      const itemOptions: SelectOption[] = items.map((item) => {
+        if (isPower) {
+          const displayName = getPowerDisplayName(item);
+          return {
+            value: item,
+            label: displayName !== item ? `${displayName} (${item})` : item,
+          };
+        }
+        return {
+          value: item,
+          label: item,
+        };
+      });
 
       const nameResult = await p.select({
         message: `Select ${itemLabel} to remove:`,
@@ -335,8 +364,77 @@ export const removeCommand = defineCommand({
       itemName = nameResult as string;
     }
 
-    const targetPath = isSkill ? join(dir, itemName) : join(dir, `${itemName}${extension}`);
+    // Handle Power removal differently
+    if (isPower) {
+      // Validate Power removal
+      const validation = validatePowerRemoval(itemName);
+      if (!validation.valid) {
+        p.cancel(`Cannot remove Power '${itemName}': ${validation.errors.join(", ")}`);
+        process.exit(1);
+      }
 
+      // Show warnings if any
+      if (validation.warnings.length > 0 && !args.force) {
+        console.log();
+        console.log(pc.yellow("  Warnings:"));
+        validation.warnings.forEach((warning) => {
+          console.log(pc.dim(`    • ${warning}`));
+        });
+        console.log();
+
+        const shouldContinue = await p.confirm({
+          message: `Are you sure you want to remove Power ${highlight(getPowerDisplayName(itemName))}?`,
+          initialValue: false,
+        });
+
+        if (p.isCancel(shouldContinue) || !shouldContinue) {
+          p.cancel("Operation cancelled");
+          process.exit(0);
+        }
+      }
+
+      try {
+        const result = await uninstallPowerWithErrorHandling(itemName);
+
+        if (result.errors.length > 0) {
+          console.log();
+          console.log(pc.red("  Errors during removal:"));
+          result.errors.forEach((error) => {
+            console.log(pc.dim(`    • ${error}`));
+          });
+        }
+
+        if (result.warnings.length > 0) {
+          console.log();
+          console.log(pc.yellow("  Warnings:"));
+          result.warnings.forEach((warning) => {
+            console.log(pc.dim(`    • ${warning}`));
+          });
+        }
+
+        if (result.added.length > 0) {
+          console.log();
+          console.log(pc.green("  Removed components:"));
+          result.added.forEach((component) => {
+            console.log(pc.dim(`    • ${component}`));
+          });
+        }
+
+        console.log();
+        printSuccess(`Removed Power ${highlight(getPowerDisplayName(itemName))}`);
+        console.log();
+        p.outro(pc.green("✨ Done!"));
+      } catch (error) {
+        p.cancel(
+          `Error removing Power: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+        process.exit(1);
+      }
+      return;
+    }
+
+    // Handle regular file/directory removal (rules and skills)
+    const targetPath = isSkill ? join(dir, itemName) : join(dir, `${itemName}${extension}`);
     const exists = isSkill ? dirExists(targetPath) : fileExists(targetPath);
 
     if (!exists) {

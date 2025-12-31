@@ -24,9 +24,23 @@
     "start": "node dist/cli.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "biome check --write",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:integration": "vitest --run --config vitest.integration.config.ts",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["cursor", "cursor-ide", "kiro", "github-copilot", "mcp", "cli", "rules", "commands", "ai", "productivity"],
+  "keywords": [
+    "cursor",
+    "cursor-ide",
+    "kiro",
+    "github-copilot",
+    "mcp",
+    "cli",
+    "rules",
+    "commands",
+    "ai",
+    "productivity"
+  ],
   "author": "",
   "license": "MIT",
   "repository": {
@@ -44,14 +58,18 @@
     "figlet": "^1.8.0",
     "giget": "^1.2.3",
     "gradient-string": "^3.0.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "tar-stream": "^3.1.7"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/figlet": "^1.7.0",
     "@types/gradient-string": "^1.1.6",
     "@types/node": "^22.9.0",
+    "@types/tar-stream": "^3.1.4",
+    "fast-check": "^3.15.0",
     "tsup": "^8.3.5",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^1.1.0"
   }
 }

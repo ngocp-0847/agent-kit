@@ -40,6 +40,7 @@ ak init
 - **📜 Commands** - Reusable prompt templates for common tasks
 - **📋 Rules** - Project-specific AI behavior guidelines
 - **🎓 Skills** - Comprehensive guides with references for specialized domains
+- **⚡ Powers** - MCP servers and steering files for enhanced Kiro capabilities
 - **🔄 Sync** - Keep configurations updated from the community
 - **🎯 Multi-Agent** - Support for Cursor IDE, GitHub Copilot, Windsurf, Kiro, and more
 - **🎨 Beautiful CLI** - Delightful terminal experience
@@ -59,6 +60,8 @@ agent-kit init -t kiro               # Initialize for Kiro (.kiro/steering/)
 agent-kit init -c                    # Only initialize commands
 agent-kit init -r                    # Only initialize rules
 agent-kit init -s                    # Only initialize skills
+agent-kit init -m                    # Only initialize MCP servers (Kiro only)
+agent-kit init -p                    # Only initialize Powers (Kiro only)
 agent-kit init -f                    # Force overwrite existing files
 agent-kit init -a                    # Install all templates without selection prompts
 ```
@@ -99,6 +102,7 @@ agent-kit pull -t kiro                 # Pull to Kiro
 agent-kit pull -c                      # Only pull commands
 agent-kit pull -r                      # Only pull rules
 agent-kit pull -s                      # Only pull skills
+agent-kit pull -p                      # Only update Powers (Kiro only)
 agent-kit pull -f                      # Force overwrite without confirmation
 agent-kit pull -t cursor -r -f         # Pull rules to Cursor with force
 ```
@@ -112,6 +116,7 @@ agent-kit list           # List everything
 agent-kit list -c        # Only list commands
 agent-kit list -r        # Only list rules
 agent-kit list -s        # Only list skills
+agent-kit list -p        # Only list powers
 agent-kit list -m        # Only list MCP servers
 agent-kit list -v        # Verbose mode with file paths
 ```
@@ -272,26 +277,32 @@ your-project/
 ```
 your-project/
 └── .kiro/
-    └── steering/                  # Steering files (.md)
-        ├── docs.md
-        ├── explain.md
-        ├── fix.md
-        ├── implement.md
-        ├── refactor.md
-        ├── review.md
-        ├── test.md
-        ├── coding-style.md
-        ├── git.md
-        └── skills/                # Comprehensive guides with references
-            ├── aesthetic/
-            │   ├── SKILL.md
-            │   ├── assets/
-            │   └── references/
-            ├── backend-development/
-            │   ├── SKILL.md
-            │   └── references/
-            └── ... (other skills)
+    ├── settings/
+    │   └── mcp.json               # MCP server configurations
+    ├── steering/                  # Steering files (.md)
+    │   ├── docs.md
+    │   ├── explain.md
+    │   ├── fix.md
+    │   ├── implement.md
+    │   ├── refactor.md
+    │   ├── review.md
+    │   ├── test.md
+    │   ├── coding-style.md
+    │   ├── git.md
+    │   └── skills/                # Comprehensive guides with references
+    │       ├── aesthetic/
+    │       │   ├── SKILL.md
+    │       │   ├── assets/
+    │       │   └── references/
+    │       ├── backend-development/
+    │       │   ├── SKILL.md
+    │       │   └── references/
+    │       └── ... (other skills)
+    └── powers/
+        └── installed.json         # Installed Powers tracking
 ```
+
+> **Note**: Powers for Kiro include MCP servers (configured in `.kiro/settings/mcp.json`) and steering files (copied to `.kiro/steering/`). Use `agent-kit init -p` to install Powers or `agent-kit list -p` to see installed Powers.
 
 ## 🎯 Included Templates
 
@@ -328,6 +339,43 @@ your-project/
 | `sequential-thinking`  | Structured problem-solving with revision, branching, and hypothesis verification   |
 | `ui-styling`           | shadcn/ui components, Tailwind CSS utilities, theming, accessibility, and canvas-based visual design |
 
+### Powers (Kiro Only)
+
+Powers are specialized packages for Kiro that include MCP servers, steering files, and documentation for specific domains.
+
+| Power                  | Description                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| `nestjs-swagger-power` | Scans NestJS projects and generates Swagger/OpenAPI documentation                  |
+
+#### Power Features
+
+- **MCP Servers**: Model Context Protocol servers that provide tools and capabilities to Kiro
+- **Steering Files**: Context and instructions for specific domains
+- **Examples**: Usage examples and best practices
+- **Setup Instructions**: Guidance for required environment variables and dependencies
+
+#### Installing Powers
+
+```bash
+# Interactive Power selection during init
+agent-kit init -t kiro
+
+# Install only Powers
+agent-kit init -t kiro -p
+
+# Install all Powers without prompts
+agent-kit init -t kiro -p -a
+
+# Update installed Powers
+agent-kit pull -t kiro -p
+
+# List installed Powers
+agent-kit list -p
+
+# Remove a Power
+agent-kit remove --target kiro -t power
+```
+
 ## 🛠️ Development
 
 ```bash
@@ -351,6 +399,11 @@ pnpm dev
 ### Requirements
 
 - Node.js >= 18.0.0
+
+### Documentation
+
+- [Power Development Guide](docs/power-development.md) - How to create custom Kiro Powers
+- [Power Troubleshooting](docs/power-troubleshooting.md) - Common issues and solutions
 
 ## 📄 License
 
