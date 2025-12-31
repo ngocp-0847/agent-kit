@@ -8,13 +8,7 @@
     "start": "node servers/example-server.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
-  "keywords": [
-    "kiro",
-    "mcp",
-    "example",
-    "template",
-    "power"
-  ],
+  "keywords": ["kiro", "mcp", "example", "template", "power"],
   "author": "",
   "license": "MIT",
   "dependencies": {

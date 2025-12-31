@@ -8,6 +8,13 @@ import { highlight, printDivider, printInfo, printSuccess } from "../utils/brand
 import { REPO_REF, REPO_URL } from "../utils/constants";
 import { ensureDir, listDirs, listFiles, readFile, writeFile } from "../utils/fs";
 import {
+  getInstalledPowers,
+  getPowerDisplayName,
+  installPowerFromLocal,
+  listAvailablePowers,
+  validatePowerCompatibility,
+} from "../utils/power";
+import {
   getTargetConfig,
   getTargetDirectories,
   isValidTarget,
@@ -19,13 +26,6 @@ import {
   transformRuleForAntiGravity,
   transformTocContentForCursor,
 } from "../utils/templates";
-import {
-  getInstalledPowers,
-  installPowerFromLocal,
-  getPowerDisplayName,
-  validatePowerCompatibility,
-  listAvailablePowers,
-} from "../utils/power";
 
 async function convertPulledFilesForTarget(
   target: InstructionTarget,
@@ -90,22 +90,22 @@ async function convertPulledFilesForTarget(
  */
 async function updateInstalledPowers(spinner: any): Promise<void> {
   const installedPowers = getInstalledPowers();
-  
+
   if (installedPowers.length === 0) {
     return;
   }
 
   spinner.start("Checking for Power updates...");
-  
+
   try {
     // Get available powers from local templates
     const availablePowers = listAvailablePowers();
     const updatesAvailable: Array<{ current: any; latest: any }> = [];
-    
+
     // Check each installed Power for updates
     for (const installedPower of installedPowers) {
-      const latestPower = availablePowers.find(p => p.name === installedPower.name);
-      
+      const latestPower = availablePowers.find((p) => p.name === installedPower.name);
+
       if (latestPower && latestPower.version !== installedPower.version) {
         updatesAvailable.push({
           current: installedPower,
@@ -113,43 +113,49 @@ async function updateInstalledPowers(spinner: any): Promise<void> {
         });
       }
     }
-    
+
     if (updatesAvailable.length === 0) {
       spinner.stop("All Powers are up to date");
       return;
     }
-    
-    spinner.stop(`Found ${updatesAvailable.length} Power update${updatesAvailable.length !== 1 ? 's' : ''}`);
-    
+
+    spinner.stop(
+      `Found ${updatesAvailable.length} Power update${updatesAvailable.length !== 1 ? "s" : ""}`,
+    );
+
     // Update each Power
     for (const { current, latest } of updatesAvailable) {
-      spinner.start(`Updating ${getPowerDisplayName(current.name)} v${current.version} → v${latest.version}...`);
-      
+      spinner.start(
+        `Updating ${getPowerDisplayName(current.name)} v${current.version} → v${latest.version}...`,
+      );
+
       try {
         // Validate compatibility
         const compatibility = validatePowerCompatibility(latest);
         if (!compatibility.valid) {
-          spinner.stop(`Skipped ${current.name}: ${compatibility.errors.join(', ')}`);
+          spinner.stop(`Skipped ${current.name}: ${compatibility.errors.join(", ")}`);
           continue;
         }
-        
+
         // Install from local templates
         const updateResult = await installPowerFromLocal(latest.name, process.cwd());
-        
+
         if (updateResult.errors.length > 0) {
-          spinner.stop(`Failed to update ${current.name}: ${updateResult.errors.join(', ')}`);
+          spinner.stop(`Failed to update ${current.name}: ${updateResult.errors.join(", ")}`);
           continue;
         }
-        
+
         spinner.stop(`Updated ${getPowerDisplayName(current.name)} to v${latest.version}`);
-        
       } catch (error) {
-        spinner.stop(`Failed to update ${current.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        spinner.stop(
+          `Failed to update ${current.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
       }
     }
-    
   } catch (error) {
-    spinner.stop(`Failed to check for updates: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    spinner.stop(
+      `Failed to check for updates: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -226,7 +232,10 @@ export const pullCommand = defineCommand({
     const existingSkills = listDirs(skillsDir);
     const existingPowers = getInstalledPowers();
     const hasExisting =
-      existingCommands.length > 0 || existingRules.length > 0 || existingSkills.length > 0 || existingPowers.length > 0;
+      existingCommands.length > 0 ||
+      existingRules.length > 0 ||
+      existingSkills.length > 0 ||
+      existingPowers.length > 0;
 
     console.log(pc.dim(`  Target: ${highlight(targetConfig.label)}`));
     console.log();
@@ -341,7 +350,7 @@ export const pullCommand = defineCommand({
         const updated = updatedPowers.length - existingPowers.length;
         printSuccess(
           `Powers: ${highlight(updatedPowers.length.toString())} total` +
-            (updated !== 0 ? pc.green(` (${updated > 0 ? '+' : ''}${updated} changes)`) : ""),
+            (updated !== 0 ? pc.green(` (${updated > 0 ? "+" : ""}${updated} changes)`) : ""),
         );
       }
 

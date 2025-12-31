@@ -10,6 +10,7 @@ import {
   getCopilotCommandsDir,
   getCopilotInstructionsDir,
   getCopilotInstructionsPath,
+  getCopilotPromptsDir,
   getCopilotRulesDir,
   getCopilotSkillsDir,
   readFile,
@@ -31,20 +32,22 @@ export interface CopilotInstallResult {
 }
 
 async function installCopilotCommands(
-  commandsDir: string,
+  promptsDir: string,
   selectedCommands: string[],
 ): Promise<string[]> {
   if (selectedCommands.length === 0) return [];
 
-  ensureDir(commandsDir);
+  ensureDir(promptsDir);
   const commandsMap = await fetchMultipleTemplates("commands", selectedCommands);
   const installed: string[] = [];
 
   for (const [filename, content] of commandsMap) {
     const cleanContent = stripFrontmatter(content);
-    const filePath = join(commandsDir, filename);
+    // Convert .md to .prompt.md for VS Code Copilot prompt files
+    const promptFilename = filename.replace(/\.md$/, ".prompt.md");
+    const filePath = join(promptsDir, promptFilename);
     writeFile(filePath, cleanContent);
-    installed.push(filename);
+    installed.push(promptFilename);
   }
 
   return installed;
@@ -111,12 +114,14 @@ export async function checkCopilotConflicts(cwd: string, force: boolean): Promis
   const copilotDir = getCopilotInstructionsDir(cwd);
   const copilotIndexPath = getCopilotInstructionsPath(cwd);
   const claudeSkillsDir = getCopilotSkillsDir(cwd);
+  const promptsDir = getCopilotPromptsDir(cwd);
 
   const hasExistingDir = dirExists(copilotDir);
   const hasExistingIndex = fileExists(copilotIndexPath);
   const hasExistingSkills = dirExists(claudeSkillsDir);
+  const hasExistingPrompts = dirExists(promptsDir);
 
-  if ((hasExistingDir || hasExistingIndex || hasExistingSkills) && !force) {
+  if ((hasExistingDir || hasExistingIndex || hasExistingSkills || hasExistingPrompts) && !force) {
     const overwrite = await p.confirm({
       message: "GitHub Copilot instructions already exist. Overwrite?",
       initialValue: false,
@@ -136,13 +141,13 @@ export async function installCopilotInstructions(
   selectedRules: string[],
   selectedSkills: string[],
 ): Promise<CopilotInstallResult> {
-  const commandsDir = getCopilotCommandsDir(cwd);
+  const promptsDir = getCopilotPromptsDir(cwd);
   const rulesDir = getCopilotRulesDir(cwd);
   const skillsDir = getCopilotSkillsDir(cwd);
   const copilotIndexPath = getCopilotInstructionsPath(cwd);
 
   const [installedCommands, rulesResult, installedSkills] = await Promise.all([
-    installCopilotCommands(commandsDir, selectedCommands),
+    installCopilotCommands(promptsDir, selectedCommands),
     installCopilotRules(rulesDir, selectedRules),
     installCopilotSkills(skillsDir, selectedSkills),
   ]);
@@ -161,6 +166,9 @@ export async function installCopilotInstructions(
 
   printSuccess("GitHub Copilot instructions generated");
   console.log(pc.dim(`   └─ ${copilotIndexPath}`));
+  if (installedCommands.length > 0) {
+    console.log(pc.dim(`   └─ ${promptsDir}/`));
+  }
   console.log(pc.dim(`   └─ ${getCopilotInstructionsDir(cwd)}/`));
   if (installedSkills.length > 0) {
     console.log(pc.dim(`   └─ ${getCopilotSkillsDir(cwd)}/`));

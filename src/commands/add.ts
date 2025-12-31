@@ -6,18 +6,18 @@ import type { InstructionTarget } from "../types/init";
 import { highlight } from "../utils/branding";
 import { deleteFile, dirExists, ensureDir, fileExists, readFile, writeFile } from "../utils/fs";
 import {
+  checkPowerScaffoldConflicts,
+  getProjectPowerTargetDir,
+  listAvailablePowers,
+  scaffoldPowerToProject,
+} from "../utils/power";
+import {
   getTargetConfig,
   getTargetDirectories,
   isValidTarget,
   promptTargetSelection,
 } from "../utils/target";
 import { convertMdToMdc } from "../utils/templates";
-import {
-  listAvailablePowers,
-  scaffoldPowerToProject,
-  checkPowerScaffoldConflicts,
-  getProjectPowerTargetDir,
-} from "../utils/power";
 
 type ItemType = "command" | "rule" | "skill" | "power";
 
@@ -360,16 +360,18 @@ async function handleAddPower(templateName?: string, force?: boolean): Promise<v
   let selectedPower: string;
 
   if (templateName) {
-    const found = availablePowers.find(p => p.name === templateName);
+    const found = availablePowers.find((p) => p.name === templateName);
     if (!found) {
-      p.cancel(`Power template '${templateName}' not found. Available: ${availablePowers.map(p => p.name).join(", ")}`);
+      p.cancel(
+        `Power template '${templateName}' not found. Available: ${availablePowers.map((p) => p.name).join(", ")}`,
+      );
       process.exit(1);
     }
     selectedPower = templateName;
   } else {
     const selection = await p.select({
       message: "Select a power template to scaffold:",
-      options: availablePowers.map(power => ({
+      options: availablePowers.map((power) => ({
         value: power.name,
         label: power.displayName || power.name,
         hint: power.description,
@@ -416,7 +418,8 @@ async function handleAddPower(templateName?: string, force?: boolean): Promise<v
   console.log();
   console.log(pc.dim("  Directory: ") + highlight(targetDir));
   console.log(pc.dim("  Files created:"));
-  for (const item of result.added.slice(1)) { // Skip first "Power scaffolded" message
+  for (const item of result.added.slice(1)) {
+    // Skip first "Power scaffolded" message
     console.log(pc.dim(`    ${item}`));
   }
 

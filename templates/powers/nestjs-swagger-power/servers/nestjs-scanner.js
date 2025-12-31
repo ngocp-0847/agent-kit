@@ -1,27 +1,24 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import fs from 'fs/promises';
-import path from 'path';
-import { glob } from 'glob';
+import path from "path";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import fs from "fs/promises";
+import { glob } from "glob";
 
 class NestJSScanner {
   constructor() {
     this.server = new Server(
       {
-        name: 'nestjs-scanner',
-        version: '0.1.0',
+        name: "nestjs-scanner",
+        version: "0.1.0",
       },
       {
         capabilities: {
           tools: {},
         },
-      }
+      },
     );
 
     this.setupToolHandlers();
@@ -32,116 +29,117 @@ class NestJSScanner {
       return {
         tools: [
           {
-            name: 'scan_nestjs_project',
-            description: 'Scan NestJS project to extract API definitions and generate Swagger documentation',
+            name: "scan_nestjs_project",
+            description:
+              "Scan NestJS project to extract API definitions and generate Swagger documentation",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
                 projectPath: {
-                  type: 'string',
-                  description: 'Path to the NestJS project root directory',
-                  default: '.'
+                  type: "string",
+                  description: "Path to the NestJS project root directory",
+                  default: ".",
                 },
                 outputPath: {
-                  type: 'string',
-                  description: 'Path where to save the generated Swagger file',
-                  default: './swagger.json'
+                  type: "string",
+                  description: "Path where to save the generated Swagger file",
+                  default: "./swagger.json",
                 },
                 format: {
-                  type: 'string',
-                  enum: ['json', 'yaml'],
-                  description: 'Output format for the Swagger file',
-                  default: 'json'
+                  type: "string",
+                  enum: ["json", "yaml"],
+                  description: "Output format for the Swagger file",
+                  default: "json",
                 },
                 includeExamples: {
-                  type: 'boolean',
-                  description: 'Include example values in the generated Swagger',
-                  default: true
-                }
+                  type: "boolean",
+                  description: "Include example values in the generated Swagger",
+                  default: true,
+                },
               },
-              required: ['projectPath']
-            }
+              required: ["projectPath"],
+            },
           },
           {
-            name: 'extract_controllers',
-            description: 'Extract controller information from NestJS project',
+            name: "extract_controllers",
+            description: "Extract controller information from NestJS project",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
                 projectPath: {
-                  type: 'string',
-                  description: 'Path to the NestJS project root directory',
-                  default: '.'
+                  type: "string",
+                  description: "Path to the NestJS project root directory",
+                  default: ".",
                 },
                 controllerPattern: {
-                  type: 'string',
-                  description: 'Glob pattern to match controller files',
-                  default: '**/*.controller.ts'
-                }
+                  type: "string",
+                  description: "Glob pattern to match controller files",
+                  default: "**/*.controller.ts",
+                },
               },
-              required: ['projectPath']
-            }
+              required: ["projectPath"],
+            },
           },
           {
-            name: 'extract_dtos',
-            description: 'Extract DTO (Data Transfer Object) definitions from NestJS project',
+            name: "extract_dtos",
+            description: "Extract DTO (Data Transfer Object) definitions from NestJS project",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
                 projectPath: {
-                  type: 'string',
-                  description: 'Path to the NestJS project root directory',
-                  default: '.'
+                  type: "string",
+                  description: "Path to the NestJS project root directory",
+                  default: ".",
                 },
                 dtoPattern: {
-                  type: 'string',
-                  description: 'Glob pattern to match DTO files',
-                  default: '**/*.dto.ts'
-                }
+                  type: "string",
+                  description: "Glob pattern to match DTO files",
+                  default: "**/*.dto.ts",
+                },
               },
-              required: ['projectPath']
-            }
+              required: ["projectPath"],
+            },
           },
           {
-            name: 'generate_swagger_spec',
-            description: 'Generate OpenAPI/Swagger specification from extracted API data',
+            name: "generate_swagger_spec",
+            description: "Generate OpenAPI/Swagger specification from extracted API data",
             inputSchema: {
-              type: 'object',
+              type: "object",
               properties: {
                 apiData: {
-                  type: 'object',
-                  description: 'Extracted API data from controllers and DTOs'
+                  type: "object",
+                  description: "Extracted API data from controllers and DTOs",
                 },
                 projectInfo: {
-                  type: 'object',
+                  type: "object",
                   properties: {
                     title: {
-                      type: 'string',
-                      description: 'API title',
-                      default: 'NestJS API'
+                      type: "string",
+                      description: "API title",
+                      default: "NestJS API",
                     },
                     version: {
-                      type: 'string',
-                      description: 'API version',
-                      default: '1.0.0'
+                      type: "string",
+                      description: "API version",
+                      default: "1.0.0",
                     },
                     description: {
-                      type: 'string',
-                      description: 'API description'
-                    }
-                  }
+                      type: "string",
+                      description: "API description",
+                    },
+                  },
                 },
                 format: {
-                  type: 'string',
-                  enum: ['json', 'yaml'],
-                  description: 'Output format',
-                  default: 'json'
-                }
+                  type: "string",
+                  enum: ["json", "yaml"],
+                  description: "Output format",
+                  default: "json",
+                },
               },
-              required: ['apiData']
-            }
-          }
-        ]
+              required: ["apiData"],
+            },
+          },
+        ],
       };
     });
 
@@ -150,13 +148,13 @@ class NestJSScanner {
 
       try {
         switch (name) {
-          case 'scan_nestjs_project':
+          case "scan_nestjs_project":
             return await this.scanNestJSProject(args);
-          case 'extract_controllers':
+          case "extract_controllers":
             return await this.extractControllers(args);
-          case 'extract_dtos':
+          case "extract_dtos":
             return await this.extractDTOs(args);
-          case 'generate_swagger_spec':
+          case "generate_swagger_spec":
             return await this.generateSwaggerSpec(args);
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -165,17 +163,22 @@ class NestJSScanner {
         return {
           content: [
             {
-              type: 'text',
-              text: `Error: ${error.message}`
-            }
-          ]
+              type: "text",
+              text: `Error: ${error.message}`,
+            },
+          ],
         };
       }
     });
   }
 
   async scanNestJSProject(args) {
-    const { projectPath = '.', outputPath = './swagger.json', format = 'json', includeExamples = true } = args;
+    const {
+      projectPath = ".",
+      outputPath = "./swagger.json",
+      format = "json",
+      includeExamples = true,
+    } = args;
 
     try {
       // Extract controllers and DTOs
@@ -184,18 +187,19 @@ class NestJSScanner {
 
       // Read package.json for project info
       let projectInfo = {
-        title: 'NestJS API',
-        version: '1.0.0',
-        description: 'API documentation generated from NestJS source code'
+        title: "NestJS API",
+        version: "1.0.0",
+        description: "API documentation generated from NestJS source code",
       };
 
       try {
-        const packageJsonPath = path.join(projectPath, 'package.json');
-        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+        const packageJsonPath = path.join(projectPath, "package.json");
+        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf-8"));
         projectInfo = {
-          title: packageJson.name || 'NestJS API',
-          version: packageJson.version || '1.0.0',
-          description: packageJson.description || 'API documentation generated from NestJS source code'
+          title: packageJson.name || "NestJS API",
+          version: packageJson.version || "1.0.0",
+          description:
+            packageJson.description || "API documentation generated from NestJS source code",
         };
       } catch (error) {
         // Use default values if package.json is not found
@@ -204,7 +208,7 @@ class NestJSScanner {
       // Combine extracted data
       const apiData = {
         controllers: controllers.content[0].text,
-        dtos: dtos.content[0].text
+        dtos: dtos.content[0].text,
       };
 
       // Generate Swagger specification
@@ -212,7 +216,7 @@ class NestJSScanner {
         apiData,
         projectInfo,
         format,
-        includeExamples
+        includeExamples,
       });
 
       // Save to file
@@ -221,10 +225,10 @@ class NestJSScanner {
       return {
         content: [
           {
-            type: 'text',
-            text: `Successfully scanned NestJS project and generated Swagger documentation at: ${outputPath}\n\nSummary:\n- Controllers analyzed: ${JSON.parse(apiData.controllers).length}\n- DTOs processed: ${JSON.parse(apiData.dtos).length}\n- Output format: ${format.toUpperCase()}`
-          }
-        ]
+            type: "text",
+            text: `Successfully scanned NestJS project and generated Swagger documentation at: ${outputPath}\n\nSummary:\n- Controllers analyzed: ${JSON.parse(apiData.controllers).length}\n- DTOs processed: ${JSON.parse(apiData.dtos).length}\n- Output format: ${format.toUpperCase()}`,
+          },
+        ],
       };
     } catch (error) {
       throw new Error(`Failed to scan NestJS project: ${error.message}`);
@@ -232,7 +236,7 @@ class NestJSScanner {
   }
 
   async extractControllers(args) {
-    const { projectPath = '.', controllerPattern = '**/*.controller.ts' } = args;
+    const { projectPath = ".", controllerPattern = "**/*.controller.ts" } = args;
 
     try {
       const controllerFiles = await glob(controllerPattern, { cwd: projectPath });
@@ -240,8 +244,8 @@ class NestJSScanner {
 
       for (const file of controllerFiles) {
         const filePath = path.join(projectPath, file);
-        const content = await fs.readFile(filePath, 'utf-8');
-        
+        const content = await fs.readFile(filePath, "utf-8");
+
         const controllerInfo = this.parseController(content, file);
         if (controllerInfo) {
           controllers.push(controllerInfo);
@@ -251,10 +255,10 @@ class NestJSScanner {
       return {
         content: [
           {
-            type: 'text',
-            text: JSON.stringify(controllers, null, 2)
-          }
-        ]
+            type: "text",
+            text: JSON.stringify(controllers, null, 2),
+          },
+        ],
       };
     } catch (error) {
       throw new Error(`Failed to extract controllers: ${error.message}`);
@@ -262,7 +266,7 @@ class NestJSScanner {
   }
 
   async extractDTOs(args) {
-    const { projectPath = '.', dtoPattern = '**/*.dto.ts' } = args;
+    const { projectPath = ".", dtoPattern = "**/*.dto.ts" } = args;
 
     try {
       const dtoFiles = await glob(dtoPattern, { cwd: projectPath });
@@ -270,8 +274,8 @@ class NestJSScanner {
 
       for (const file of dtoFiles) {
         const filePath = path.join(projectPath, file);
-        const content = await fs.readFile(filePath, 'utf-8');
-        
+        const content = await fs.readFile(filePath, "utf-8");
+
         const dtoInfo = this.parseDTO(content, file);
         if (dtoInfo) {
           dtos.push(dtoInfo);
@@ -281,10 +285,10 @@ class NestJSScanner {
       return {
         content: [
           {
-            type: 'text',
-            text: JSON.stringify(dtos, null, 2)
-          }
-        ]
+            type: "text",
+            text: JSON.stringify(dtos, null, 2),
+          },
+        ],
       };
     } catch (error) {
       throw new Error(`Failed to extract DTOs: ${error.message}`);
@@ -294,9 +298,9 @@ class NestJSScanner {
   parseController(content, filename) {
     const controller = {
       filename,
-      className: '',
-      basePath: '',
-      routes: []
+      className: "",
+      basePath: "",
+      routes: [],
     };
 
     // Extract controller class name
@@ -312,25 +316,26 @@ class NestJSScanner {
     }
 
     // Extract routes
-    const routeRegex = /@(Get|Post|Put|Delete|Patch)\(['"`]?([^'"`\)]*?)['"`]?\)\s*(?:@\w+(?:\([^)]*\))?\s*)*\s*(?:async\s+)?(\w+)\s*\([^)]*\)/g;
+    const routeRegex =
+      /@(Get|Post|Put|Delete|Patch)\(['"`]?([^'"`\)]*?)['"`]?\)\s*(?:@\w+(?:\([^)]*\))?\s*)*\s*(?:async\s+)?(\w+)\s*\([^)]*\)/g;
     let match;
-    
+
     while ((match = routeRegex.exec(content)) !== null) {
       const [, method, path, functionName] = match;
-      
+
       // Extract function parameters and decorators
       const functionStart = content.indexOf(match[0]);
       const functionEnd = this.findFunctionEnd(content, functionStart);
       const functionContent = content.substring(functionStart, functionEnd);
-      
+
       const route = {
         method: method.toLowerCase(),
-        path: path || '',
+        path: path || "",
         functionName,
         parameters: this.extractParameters(functionContent),
-        decorators: this.extractDecorators(functionContent)
+        decorators: this.extractDecorators(functionContent),
       };
-      
+
       controller.routes.push(route);
     }
 
@@ -340,8 +345,8 @@ class NestJSScanner {
   parseDTO(content, filename) {
     const dto = {
       filename,
-      className: '',
-      properties: []
+      className: "",
+      properties: [],
     };
 
     // Extract DTO class name
@@ -353,17 +358,17 @@ class NestJSScanner {
     // Extract properties with decorators
     const propertyRegex = /@(\w+)(?:\([^)]*\))?\s*(\w+)(?:\?)?:\s*([^;]+);/g;
     let match;
-    
+
     while ((match = propertyRegex.exec(content)) !== null) {
       const [, decorator, name, type] = match;
-      
+
       const property = {
         name,
         type: type.trim(),
         decorators: [decorator],
-        optional: match[0].includes('?')
+        optional: match[0].includes("?"),
       };
-      
+
       dto.properties.push(property);
     }
 
@@ -372,19 +377,20 @@ class NestJSScanner {
 
   extractParameters(functionContent) {
     const parameters = [];
-    const paramRegex = /@(Body|Query|Param|Headers?)\(['"`]?([^'"`\)]*?)['"`]?\)\s+(\w+):\s*([^,\)]+)/g;
+    const paramRegex =
+      /@(Body|Query|Param|Headers?)\(['"`]?([^'"`\)]*?)['"`]?\)\s+(\w+):\s*([^,\)]+)/g;
     let match;
-    
+
     while ((match = paramRegex.exec(functionContent)) !== null) {
       const [, decorator, name, paramName, type] = match;
       parameters.push({
         decorator,
         name: name || paramName,
         paramName,
-        type: type.trim()
+        type: type.trim(),
       });
     }
-    
+
     return parameters;
   }
 
@@ -392,58 +398,58 @@ class NestJSScanner {
     const decorators = [];
     const decoratorRegex = /@(\w+)(?:\([^)]*\))?/g;
     let match;
-    
+
     while ((match = decoratorRegex.exec(functionContent)) !== null) {
       decorators.push(match[1]);
     }
-    
+
     return decorators;
   }
 
   findFunctionEnd(content, start) {
     let braceCount = 0;
     let inFunction = false;
-    
+
     for (let i = start; i < content.length; i++) {
       const char = content[i];
-      
-      if (char === '{') {
+
+      if (char === "{") {
         braceCount++;
         inFunction = true;
-      } else if (char === '}') {
+      } else if (char === "}") {
         braceCount--;
         if (inFunction && braceCount === 0) {
           return i + 1;
         }
       }
     }
-    
+
     return content.length;
   }
 
   async generateSwaggerSpec(args) {
-    const { apiData, projectInfo = {}, format = 'json', includeExamples = true } = args;
+    const { apiData, projectInfo = {}, format = "json", includeExamples = true } = args;
 
     try {
-      const controllers = typeof apiData.controllers === 'string' 
-        ? JSON.parse(apiData.controllers) 
-        : apiData.controllers || [];
-      
-      const dtos = typeof apiData.dtos === 'string' 
-        ? JSON.parse(apiData.dtos) 
-        : apiData.dtos || [];
+      const controllers =
+        typeof apiData.controllers === "string"
+          ? JSON.parse(apiData.controllers)
+          : apiData.controllers || [];
+
+      const dtos = typeof apiData.dtos === "string" ? JSON.parse(apiData.dtos) : apiData.dtos || [];
 
       const swaggerSpec = {
-        openapi: '3.0.0',
+        openapi: "3.0.0",
         info: {
-          title: projectInfo.title || 'NestJS API',
-          version: projectInfo.version || '1.0.0',
-          description: projectInfo.description || 'API documentation generated from NestJS source code'
+          title: projectInfo.title || "NestJS API",
+          version: projectInfo.version || "1.0.0",
+          description:
+            projectInfo.description || "API documentation generated from NestJS source code",
         },
         paths: {},
         components: {
-          schemas: {}
-        }
+          schemas: {},
+        },
       };
 
       // Generate schemas from DTOs
@@ -455,19 +461,24 @@ class NestJSScanner {
       // Generate paths from controllers
       for (const controller of controllers) {
         for (const route of controller.routes) {
-          const fullPath = `/${controller.basePath}${route.path}`.replace(/\/+/g, '/');
-          const pathKey = fullPath.replace(/:(\w+)/g, '{$1}');
-          
+          const fullPath = `/${controller.basePath}${route.path}`.replace(/\/+/g, "/");
+          const pathKey = fullPath.replace(/:(\w+)/g, "{$1}");
+
           if (!swaggerSpec.paths[pathKey]) {
             swaggerSpec.paths[pathKey] = {};
           }
-          
-          swaggerSpec.paths[pathKey][route.method] = this.routeToOperation(route, controller, dtos, includeExamples);
+
+          swaggerSpec.paths[pathKey][route.method] = this.routeToOperation(
+            route,
+            controller,
+            dtos,
+            includeExamples,
+          );
         }
       }
 
       let output;
-      if (format === 'yaml') {
+      if (format === "yaml") {
         // Simple YAML conversion (for basic cases)
         output = this.jsonToYaml(swaggerSpec);
       } else {
@@ -477,10 +488,10 @@ class NestJSScanner {
       return {
         content: [
           {
-            type: 'text',
-            text: output
-          }
-        ]
+            type: "text",
+            text: output,
+          },
+        ],
       };
     } catch (error) {
       throw new Error(`Failed to generate Swagger spec: ${error.message}`);
@@ -489,20 +500,20 @@ class NestJSScanner {
 
   dtoToSchema(dto, includeExamples) {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {},
-      required: []
+      required: [],
     };
 
     for (const prop of dto.properties) {
       const propSchema = this.typeToSchema(prop.type);
-      
+
       if (includeExamples) {
         propSchema.example = this.generateExample(prop.type);
       }
-      
+
       schema.properties[prop.name] = propSchema;
-      
+
       if (!prop.optional) {
         schema.required.push(prop.name);
       }
@@ -513,58 +524,58 @@ class NestJSScanner {
 
   typeToSchema(type) {
     const typeMap = {
-      'string': { type: 'string' },
-      'number': { type: 'number' },
-      'boolean': { type: 'boolean' },
-      'Date': { type: 'string', format: 'date-time' },
-      'object': { type: 'object' }
+      string: { type: "string" },
+      number: { type: "number" },
+      boolean: { type: "boolean" },
+      Date: { type: "string", format: "date-time" },
+      object: { type: "object" },
     };
 
     // Handle array types
-    if (type.includes('[]')) {
-      const itemType = type.replace('[]', '');
+    if (type.includes("[]")) {
+      const itemType = type.replace("[]", "");
       return {
-        type: 'array',
-        items: this.typeToSchema(itemType)
+        type: "array",
+        items: this.typeToSchema(itemType),
       };
     }
 
-    return typeMap[type] || { type: 'string' };
+    return typeMap[type] || { type: "string" };
   }
 
   generateExample(type) {
     const examples = {
-      'string': 'example string',
-      'number': 123,
-      'boolean': true,
-      'Date': '2023-12-01T00:00:00Z',
-      'object': {}
+      string: "example string",
+      number: 123,
+      boolean: true,
+      Date: "2023-12-01T00:00:00Z",
+      object: {},
     };
 
-    if (type.includes('[]')) {
-      const itemType = type.replace('[]', '');
+    if (type.includes("[]")) {
+      const itemType = type.replace("[]", "");
       return [this.generateExample(itemType)];
     }
 
-    return examples[type] || 'example';
+    return examples[type] || "example";
   }
 
   routeToOperation(route, controller, dtos, includeExamples) {
     const operation = {
-      tags: [controller.className.replace('Controller', '')],
+      tags: [controller.className.replace("Controller", "")],
       summary: `${route.method.toUpperCase()} ${route.path}`,
       operationId: `${controller.className}_${route.functionName}`,
       parameters: [],
       responses: {
-        '200': {
-          description: 'Successful response',
+        200: {
+          description: "Successful response",
           content: {
-            'application/json': {
-              schema: { type: 'object' }
-            }
-          }
-        }
-      }
+            "application/json": {
+              schema: { type: "object" },
+            },
+          },
+        },
+      },
     };
 
     // Add parameters
@@ -572,8 +583,8 @@ class NestJSScanner {
       const parameter = {
         name: param.name,
         in: this.getParameterLocation(param.decorator),
-        required: param.decorator !== 'Query',
-        schema: this.typeToSchema(param.type)
+        required: param.decorator !== "Query",
+        schema: this.typeToSchema(param.type),
       };
 
       if (includeExamples) {
@@ -584,16 +595,16 @@ class NestJSScanner {
     }
 
     // Add request body for POST/PUT/PATCH
-    if (['post', 'put', 'patch'].includes(route.method)) {
-      const bodyParam = route.parameters.find(p => p.decorator === 'Body');
+    if (["post", "put", "patch"].includes(route.method)) {
+      const bodyParam = route.parameters.find((p) => p.decorator === "Body");
       if (bodyParam) {
         operation.requestBody = {
           required: true,
           content: {
-            'application/json': {
-              schema: this.typeToSchema(bodyParam.type)
-            }
-          }
+            "application/json": {
+              schema: this.typeToSchema(bodyParam.type),
+            },
+          },
         };
       }
     }
@@ -603,36 +614,36 @@ class NestJSScanner {
 
   getParameterLocation(decorator) {
     const locationMap = {
-      'Param': 'path',
-      'Query': 'query',
-      'Header': 'header',
-      'Headers': 'header'
+      Param: "path",
+      Query: "query",
+      Header: "header",
+      Headers: "header",
     };
-    
-    return locationMap[decorator] || 'query';
+
+    return locationMap[decorator] || "query";
   }
 
   jsonToYaml(obj, indent = 0) {
-    const spaces = '  '.repeat(indent);
-    let yaml = '';
+    const spaces = "  ".repeat(indent);
+    let yaml = "";
 
     for (const [key, value] of Object.entries(obj)) {
       if (value === null || value === undefined) {
         yaml += `${spaces}${key}: null\n`;
-      } else if (typeof value === 'object' && !Array.isArray(value)) {
+      } else if (typeof value === "object" && !Array.isArray(value)) {
         yaml += `${spaces}${key}:\n`;
         yaml += this.jsonToYaml(value, indent + 1);
       } else if (Array.isArray(value)) {
         yaml += `${spaces}${key}:\n`;
         for (const item of value) {
-          if (typeof item === 'object') {
+          if (typeof item === "object") {
             yaml += `${spaces}  -\n`;
             yaml += this.jsonToYaml(item, indent + 2);
           } else {
             yaml += `${spaces}  - ${item}\n`;
           }
         }
-      } else if (typeof value === 'string') {
+      } else if (typeof value === "string") {
         yaml += `${spaces}${key}: "${value}"\n`;
       } else {
         yaml += `${spaces}${key}: ${value}\n`;
@@ -645,7 +656,7 @@ class NestJSScanner {
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('NestJS Scanner MCP server running on stdio');
+    console.error("NestJS Scanner MCP server running on stdio");
   }
 }
 

@@ -17,10 +17,7 @@
     "agentkit": "./dist/cli.js",
     "ak": "./dist/cli.js"
   },
-  "files": [
-    "dist",
-    "templates"
-  ],
+  "files": ["dist", "templates"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

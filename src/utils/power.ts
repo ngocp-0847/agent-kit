@@ -3,43 +3,43 @@
  * Combines: power-cache, power-dev, power-errors, power-validation, power
  */
 
-import { join, dirname } from "node:path";
-import { readdirSync, cpSync, existsSync } from "node:fs";
+import { cpSync, existsSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   InstallResult,
   InstalledComponents,
   InstalledPower,
+  McpServerInfo,
   PowerComponents,
   PowerInfo,
-  PowerManifest,
   PowerManager,
+  PowerManifest,
   PowerMcpConfig,
   PowerMetadata,
   PowerPackageJson,
   PowerRequirements,
   ValidationResult,
-  McpServerInfo,
 } from "../types/power";
 import {
-  POWER_TEMPLATES_DIR,
   POWER_EXAMPLES_DIR,
   POWER_MANIFEST_FILE,
   POWER_MCP_CONFIG_FILE,
   POWER_PACKAGE_FILE,
-  POWER_STEERING_DIR,
   POWER_SERVERS_DIR,
+  POWER_STEERING_DIR,
+  POWER_TEMPLATES_DIR,
 } from "./constants";
 import {
   ensureDir,
   fileExists,
   getKiroPowerInstallDir,
+  getKiroPowersCacheDir,
   getKiroPowersDir,
   getKiroPowersInstalledPath,
-  getKiroPowersCacheDir,
   readFile,
-  writeFile,
   removeFile,
+  writeFile,
 } from "./fs";
 
 // ============================================================================
@@ -59,7 +59,6 @@ export interface PowerErrorInfo {
   timestamp: string;
 }
 
-
 export abstract class PowerError extends Error {
   abstract readonly code: string;
   abstract readonly phase: PowerInstallationPhase;
@@ -69,16 +68,17 @@ export abstract class PowerError extends Error {
   constructor(
     message: string,
     public readonly powerName: string,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
     this.name = this.constructor.name;
   }
 
   getUserMessage(): string {
-    const troubleshootingText = this.troubleshooting.length > 0
-      ? `\n\nTroubleshooting:\n${this.troubleshooting.map(tip => `• ${tip}`).join("\n")}`
-      : "";
+    const troubleshootingText =
+      this.troubleshooting.length > 0
+        ? `\n\nTroubleshooting:\n${this.troubleshooting.map((tip) => `• ${tip}`).join("\n")}`
+        : "";
     return `${this.message}${troubleshootingText}`;
   }
 
@@ -106,10 +106,13 @@ export class PowerNetworkError extends PowerError {
     "Try again in a few minutes",
   ];
   constructor(powerName: string, operation: string, cause?: string) {
-    super(`Network error during ${operation} for Power '${powerName}'${cause ? `: ${cause}` : ""}`, powerName, { operation, cause });
+    super(
+      `Network error during ${operation} for Power '${powerName}'${cause ? `: ${cause}` : ""}`,
+      powerName,
+      { operation, cause },
+    );
   }
 }
-
 
 export class PowerValidationError extends PowerError {
   readonly code = "POWER_VALIDATION_ERROR";
@@ -120,7 +123,9 @@ export class PowerValidationError extends PowerError {
     "Check that package.json and POWER.md files exist",
   ];
   constructor(powerName: string, validationErrors: string[]) {
-    super(`Power '${powerName}' failed validation: ${validationErrors.join(", ")}`, powerName, { validationErrors });
+    super(`Power '${powerName}' failed validation: ${validationErrors.join(", ")}`, powerName, {
+      validationErrors,
+    });
   }
 }
 
@@ -133,7 +138,11 @@ export class PowerFileSystemError extends PowerError {
     "Verify you have read/write permissions",
   ];
   constructor(powerName: string, operation: string, path: string, cause?: string) {
-    super(`File system error during ${operation} for Power '${powerName}' at ${path}${cause ? `: ${cause}` : ""}`, powerName, { operation, path, cause });
+    super(
+      `File system error during ${operation} for Power '${powerName}' at ${path}${cause ? `: ${cause}` : ""}`,
+      powerName,
+      { operation, path, cause },
+    );
   }
 }
 
@@ -146,7 +155,11 @@ export class PowerMcpConfigError extends PowerError {
     "Verify you have write permissions to the .kiro/settings directory",
   ];
   constructor(powerName: string, operation: string, cause?: string) {
-    super(`MCP configuration error during ${operation} for Power '${powerName}'${cause ? `: ${cause}` : ""}`, powerName, { operation, cause });
+    super(
+      `MCP configuration error during ${operation} for Power '${powerName}'${cause ? `: ${cause}` : ""}`,
+      powerName,
+      { operation, cause },
+    );
   }
 }
 
@@ -154,7 +167,7 @@ export function createPowerErrorFromGeneric(
   error: unknown,
   powerName: string,
   phase: PowerInstallationPhase,
-  operation: string
+  operation: string,
 ): PowerError {
   const message = error instanceof Error ? error.message : String(error);
   switch (phase) {
@@ -166,7 +179,6 @@ export function createPowerErrorFromGeneric(
       return new PowerFileSystemError(powerName, operation, "unknown", message);
   }
 }
-
 
 // ============================================================================
 // VALIDATION UTILITIES
@@ -225,12 +237,13 @@ export function validatePackageJson(packageJsonPath: string): ValidationResult {
     if (!pkg.description) result.warnings.push("package.json missing 'description' field");
     if (!pkg.author) result.warnings.push("package.json missing 'author' field");
   } catch (error) {
-    result.errors.push(`Invalid package.json format: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      `Invalid package.json format: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
     result.valid = false;
   }
   return result;
 }
-
 
 export function validateMcpConfiguration(mcpConfigPath: string): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
@@ -251,13 +264,18 @@ export function validateMcpConfiguration(mcpConfigPath: string): ValidationResul
       if (!serverValidation.valid) result.valid = false;
     }
   } catch (error) {
-    result.errors.push(`Invalid MCP configuration format: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      `Invalid MCP configuration format: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
     result.valid = false;
   }
   return result;
 }
 
-export function validateMcpServerConfig(serverName: string, serverConfig: McpServerInfo): ValidationResult {
+export function validateMcpServerConfig(
+  serverName: string,
+  serverConfig: McpServerInfo,
+): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
   const prefix = `MCP server '${serverName}'`;
 
@@ -278,7 +296,10 @@ export function validateMcpServerConfig(serverName: string, serverConfig: McpSer
   return result;
 }
 
-export function validatePowerComprehensive(powerPath: string, powerInfo?: PowerInfo): ValidationResult {
+export function validatePowerComprehensive(
+  powerPath: string,
+  powerInfo?: PowerInfo,
+): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
   const structureValidation = validatePowerPackageStructure(powerPath);
   result.errors.push(...structureValidation.errors);
@@ -293,7 +314,6 @@ export function validatePowerComprehensive(powerPath: string, powerInfo?: PowerI
   }
   return result;
 }
-
 
 // ============================================================================
 // CACHE UTILITIES
@@ -322,7 +342,7 @@ export class PowerCacheManager {
   private memoryCache: Map<string, CacheEntry<unknown>>;
   private maxMemoryCacheSize: number;
 
-  constructor(cwd: string = process.cwd(), maxMemoryCacheSize: number = 100) {
+  constructor(cwd: string = process.cwd(), maxMemoryCacheSize = 100) {
     this.cacheDir = getKiroPowersCacheDir(cwd);
     this.maxMemoryCacheSize = maxMemoryCacheSize;
     this.memoryCache = new Map();
@@ -332,7 +352,10 @@ export class PowerCacheManager {
 
   async getCachedRegistry(): Promise<PowerManifest | null> {
     const cached = await this.get<PowerManifest>("registry");
-    if (cached) { this.stats.hits++; return cached; }
+    if (cached) {
+      this.stats.hits++;
+      return cached;
+    }
     this.stats.misses++;
     return null;
   }
@@ -343,15 +366,21 @@ export class PowerCacheManager {
 
   async getCachedPowerMetadata(powerName: string): Promise<PowerMetadata | null> {
     const cached = await this.get<PowerMetadata>(`power-metadata-${powerName}`);
-    if (cached) { this.stats.hits++; return cached; }
+    if (cached) {
+      this.stats.hits++;
+      return cached;
+    }
     this.stats.misses++;
     return null;
   }
 
-  async setCachedPowerMetadata(powerName: string, metadata: PowerMetadata, ttl: number = DEFAULT_CACHE_TTL): Promise<void> {
+  async setCachedPowerMetadata(
+    powerName: string,
+    metadata: PowerMetadata,
+    ttl: number = DEFAULT_CACHE_TTL,
+  ): Promise<void> {
     await this.set(`power-metadata-${powerName}`, metadata, ttl);
   }
-
 
   private async get<T>(key: string): Promise<T | null> {
     const memoryEntry = this.memoryCache.get(key);
@@ -388,7 +417,11 @@ export class PowerCacheManager {
     this.memoryCache.set(key, entry);
 
     const cacheFile = join(this.cacheDir, `${key}.json`);
-    try { writeFile(cacheFile, JSON.stringify(entry, null, 2)); } catch { /* ignore */ }
+    try {
+      writeFile(cacheFile, JSON.stringify(entry, null, 2));
+    } catch {
+      /* ignore */
+    }
   }
 
   private isEntryValid<T>(entry: CacheEntry<T>): boolean {
@@ -418,7 +451,9 @@ export class PowerCacheManager {
       }
       this.stats.lastCleanup = Date.now();
     } catch (error) {
-      result.errors.push(`Failed to cleanup cache: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Failed to cleanup cache: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
     return result;
   }
@@ -431,17 +466,25 @@ export class PowerCacheManager {
       const files = fs.readdirSync(this.cacheDir);
       for (const file of files) {
         if (!file.endsWith(".json")) continue;
-        try { removeFile(join(this.cacheDir, file)); result.removed++; } catch { /* ignore */ }
+        try {
+          removeFile(join(this.cacheDir, file));
+          result.removed++;
+        } catch {
+          /* ignore */
+        }
       }
     } catch (error) {
-      result.errors.push(`Failed to clear cache: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `Failed to clear cache: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
     return result;
   }
 
-  getStats(): CacheStats { return { ...this.stats }; }
+  getStats(): CacheStats {
+    return { ...this.stats };
+  }
 }
-
 
 let globalCacheManager: PowerCacheManager | null = null;
 
@@ -450,7 +493,9 @@ export function getCacheManager(cwd: string = process.cwd()): PowerCacheManager 
   return globalCacheManager;
 }
 
-export async function getOptimizedPowerRegistry(cwd: string = process.cwd()): Promise<PowerManifest> {
+export async function getOptimizedPowerRegistry(
+  cwd: string = process.cwd(),
+): Promise<PowerManifest> {
   const cacheManager = getCacheManager(cwd);
   const cached = await cacheManager.getCachedRegistry();
   if (cached) return cached;
@@ -459,7 +504,10 @@ export async function getOptimizedPowerRegistry(cwd: string = process.cwd()): Pr
   return manifest;
 }
 
-export async function getOptimizedPowerMetadata(powerName: string, cwd: string = process.cwd()): Promise<PowerMetadata | null> {
+export async function getOptimizedPowerMetadata(
+  powerName: string,
+  cwd: string = process.cwd(),
+): Promise<PowerMetadata | null> {
   const cacheManager = getCacheManager(cwd);
   const cached = await cacheManager.getCachedPowerMetadata(powerName);
   if (cached) return cached;
@@ -502,10 +550,11 @@ export function listAvailablePowers(cwd: string = process.cwd()): PowerInfo[] {
       const powerInfo = createPowerInfoFromPackage(powerPath);
       if (powerInfo) powers.push(powerInfo);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return powers;
 }
-
 
 export async function getPowerRegistry(cwd: string = process.cwd()): Promise<PowerManifest> {
   const powers = listAvailablePowers(cwd);
@@ -522,7 +571,9 @@ export function getInstalledPowers(cwd: string = process.cwd()): InstalledPower[
   try {
     const content = readFile(installedPath);
     return JSON.parse(content) as InstalledPower[];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 export function saveInstalledPowers(powers: InstalledPower[], cwd: string = process.cwd()): void {
@@ -535,15 +586,26 @@ export function isPowerInstalled(powerName: string, cwd: string = process.cwd())
   return getInstalledPowers(cwd).some((power) => power.name === powerName);
 }
 
-export function getInstalledPowerVersion(powerName: string, cwd: string = process.cwd()): string | null {
+export function getInstalledPowerVersion(
+  powerName: string,
+  cwd: string = process.cwd(),
+): string | null {
   const power = getInstalledPowers(cwd).find((p) => p.name === powerName);
   return power?.version || null;
 }
 
-export function getInstalledPowerMetadata(powerName: string, cwd: string = process.cwd()): PowerMetadata | null {
+export function getInstalledPowerMetadata(
+  powerName: string,
+  cwd: string = process.cwd(),
+): PowerMetadata | null {
   const power = getInstalledPowers(cwd).find((p) => p.name === powerName);
   if (!power) return null;
-  return { name: power.name, version: power.version, installedAt: power.installedAt, components: power.components };
+  return {
+    name: power.name,
+    version: power.version,
+    installedAt: power.installedAt,
+    components: power.components,
+  };
 }
 
 export function validatePowerPackage(powerPath: string): ValidationResult {
@@ -551,30 +613,52 @@ export function validatePowerPackage(powerPath: string): ValidationResult {
   const packageJsonPath = join(powerPath, POWER_PACKAGE_FILE);
   const powerMdPath = join(powerPath, POWER_MANIFEST_FILE);
 
-  if (!fileExists(packageJsonPath)) { result.errors.push("Missing package.json file"); result.valid = false; }
-  if (!fileExists(powerMdPath)) { result.errors.push("Missing POWER.md file"); result.valid = false; }
+  if (!fileExists(packageJsonPath)) {
+    result.errors.push("Missing package.json file");
+    result.valid = false;
+  }
+  if (!fileExists(powerMdPath)) {
+    result.errors.push("Missing POWER.md file");
+    result.valid = false;
+  }
 
   if (fileExists(packageJsonPath)) {
     try {
       const pkg = JSON.parse(readFile(packageJsonPath)) as PowerPackageJson;
-      if (!pkg.name) { result.errors.push("package.json missing 'name' field"); result.valid = false; }
-      if (!pkg.version) { result.errors.push("package.json missing 'version' field"); result.valid = false; }
-    } catch { result.errors.push("Invalid package.json format"); result.valid = false; }
+      if (!pkg.name) {
+        result.errors.push("package.json missing 'name' field");
+        result.valid = false;
+      }
+      if (!pkg.version) {
+        result.errors.push("package.json missing 'version' field");
+        result.valid = false;
+      }
+    } catch {
+      result.errors.push("Invalid package.json format");
+      result.valid = false;
+    }
   }
   return result;
 }
 
-
 export function readPowerPackageJson(powerPath: string): PowerPackageJson | null {
   const packageJsonPath = join(powerPath, POWER_PACKAGE_FILE);
   if (!fileExists(packageJsonPath)) return null;
-  try { return JSON.parse(readFile(packageJsonPath)) as PowerPackageJson; } catch { return null; }
+  try {
+    return JSON.parse(readFile(packageJsonPath)) as PowerPackageJson;
+  } catch {
+    return null;
+  }
 }
 
 export function readPowerMcpConfig(powerPath: string): PowerMcpConfig | null {
   const mcpConfigPath = join(powerPath, POWER_MCP_CONFIG_FILE);
   if (!fileExists(mcpConfigPath)) return null;
-  try { return JSON.parse(readFile(mcpConfigPath)) as PowerMcpConfig; } catch { return null; }
+  try {
+    return JSON.parse(readFile(mcpConfigPath)) as PowerMcpConfig;
+  } catch {
+    return null;
+  }
 }
 
 export function getPowerDisplayName(powerName: string, cwd: string = process.cwd()): string {
@@ -583,7 +667,10 @@ export function getPowerDisplayName(powerName: string, cwd: string = process.cwd
   return packageJson?.name || powerName;
 }
 
-export function getPowerDescription(powerName: string, cwd: string = process.cwd()): string | undefined {
+export function getPowerDescription(
+  powerName: string,
+  cwd: string = process.cwd(),
+): string | undefined {
   const powerPath = getKiroPowerInstallDir(powerName, cwd);
   return readPowerPackageJson(powerPath)?.description;
 }
@@ -592,12 +679,21 @@ export function createInstallResult(): InstallResult {
   return { added: [], skipped: [], errors: [], warnings: [] };
 }
 
-export function copyPowerFromTemplate(powerName: string, targetDir: string, cwd: string = process.cwd()): void {
+export function copyPowerFromTemplate(
+  powerName: string,
+  targetDir: string,
+  cwd: string = process.cwd(),
+): void {
   const templatesDir = getLocalPowersTemplateDir(cwd);
   const sourcePath = join(templatesDir, powerName);
 
   if (!existsSync(sourcePath)) {
-    throw new PowerFileSystemError(powerName, "copy", sourcePath, `Power '${powerName}' not found in templates`);
+    throw new PowerFileSystemError(
+      powerName,
+      "copy",
+      sourcePath,
+      `Power '${powerName}' not found in templates`,
+    );
   }
 
   const validation = validatePowerPackage(sourcePath);
@@ -611,15 +707,20 @@ export function getProjectPowerTargetDir(powerName: string, cwd: string = proces
   return join(cwd, powerName);
 }
 
-export function checkPowerScaffoldConflicts(powerName: string, cwd: string = process.cwd()): ValidationResult {
+export function checkPowerScaffoldConflicts(
+  powerName: string,
+  cwd: string = process.cwd(),
+): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
   const targetDir = getProjectPowerTargetDir(powerName, cwd);
 
   if (existsSync(targetDir)) {
     const importantFiles = [POWER_MANIFEST_FILE, POWER_PACKAGE_FILE, POWER_MCP_CONFIG_FILE];
-    const existingFiles = importantFiles.filter(f => existsSync(join(targetDir, f)));
+    const existingFiles = importantFiles.filter((f) => existsSync(join(targetDir, f)));
     if (existingFiles.length > 0) {
-      result.errors.push(`Directory '${powerName}' already exists with power files: ${existingFiles.join(", ")}`);
+      result.errors.push(
+        `Directory '${powerName}' already exists with power files: ${existingFiles.join(", ")}`,
+      );
       result.valid = false;
     } else if (readdirSync(targetDir).length > 0) {
       result.warnings.push(`Directory '${powerName}' exists but contains no power files`);
@@ -628,22 +729,34 @@ export function checkPowerScaffoldConflicts(powerName: string, cwd: string = pro
   return result;
 }
 
-
-export function scaffoldPowerToProject(powerName: string, cwd: string = process.cwd(), force: boolean = false): InstallResult {
+export function scaffoldPowerToProject(
+  powerName: string,
+  cwd: string = process.cwd(),
+  force = false,
+): InstallResult {
   const result = createInstallResult();
   try {
     const templatesDir = getLocalPowersTemplateDir(cwd);
     const sourcePath = join(templatesDir, powerName);
 
-    if (!existsSync(sourcePath)) { result.errors.push(`Power template '${powerName}' not found`); return result; }
+    if (!existsSync(sourcePath)) {
+      result.errors.push(`Power template '${powerName}' not found`);
+      return result;
+    }
 
     const validation = validatePowerPackage(sourcePath);
-    if (!validation.valid) { result.errors.push(...validation.errors); return result; }
+    if (!validation.valid) {
+      result.errors.push(...validation.errors);
+      return result;
+    }
     result.warnings.push(...validation.warnings);
 
     const targetDir = getProjectPowerTargetDir(powerName, cwd);
     const conflicts = checkPowerScaffoldConflicts(powerName, cwd);
-    if (!conflicts.valid && !force) { result.errors.push(...conflicts.errors); return result; }
+    if (!conflicts.valid && !force) {
+      result.errors.push(...conflicts.errors);
+      return result;
+    }
     result.warnings.push(...conflicts.warnings);
 
     copyPowerFromTemplate(powerName, targetDir, cwd);
@@ -651,20 +764,30 @@ export function scaffoldPowerToProject(powerName: string, cwd: string = process.
     const createdFiles: string[] = [];
     if (existsSync(join(targetDir, POWER_MANIFEST_FILE))) createdFiles.push(POWER_MANIFEST_FILE);
     if (existsSync(join(targetDir, POWER_PACKAGE_FILE))) createdFiles.push(POWER_PACKAGE_FILE);
-    if (existsSync(join(targetDir, POWER_MCP_CONFIG_FILE))) createdFiles.push(POWER_MCP_CONFIG_FILE);
-    if (existsSync(join(targetDir, POWER_STEERING_DIR))) createdFiles.push(`${POWER_STEERING_DIR}/`);
-    if (existsSync(join(targetDir, POWER_EXAMPLES_DIR))) createdFiles.push(`${POWER_EXAMPLES_DIR}/`);
+    if (existsSync(join(targetDir, POWER_MCP_CONFIG_FILE)))
+      createdFiles.push(POWER_MCP_CONFIG_FILE);
+    if (existsSync(join(targetDir, POWER_STEERING_DIR)))
+      createdFiles.push(`${POWER_STEERING_DIR}/`);
+    if (existsSync(join(targetDir, POWER_EXAMPLES_DIR)))
+      createdFiles.push(`${POWER_EXAMPLES_DIR}/`);
     if (existsSync(join(targetDir, POWER_SERVERS_DIR))) createdFiles.push(`${POWER_SERVERS_DIR}/`);
 
     result.added.push(`Power scaffolded: ${powerName}`);
-    result.added.push(...createdFiles.map(f => `  ${f}`));
+    result.added.push(...createdFiles.map((f) => `  ${f}`));
   } catch (error) {
-    result.errors.push(error instanceof PowerError ? error.message : `Failed to scaffold power: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      error instanceof PowerError
+        ? error.message
+        : `Failed to scaffold power: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
   return result;
 }
 
-export async function installMcpServers(powerPath: string, mcpConfigPath: string): Promise<InstallResult> {
+export async function installMcpServers(
+  powerPath: string,
+  mcpConfigPath: string,
+): Promise<InstallResult> {
   const result = createInstallResult();
   try {
     const powerMcpConfig = readPowerMcpConfig(powerPath);
@@ -672,26 +795,39 @@ export async function installMcpServers(powerPath: string, mcpConfigPath: string
 
     let existingConfig: { mcpServers?: Record<string, unknown> } = {};
     if (fileExists(mcpConfigPath)) {
-      try { existingConfig = JSON.parse(readFile(mcpConfigPath)); }
-      catch (error) { result.errors.push(`Failed to parse existing MCP config: ${error instanceof Error ? error.message : "Unknown error"}`); return result; }
+      try {
+        existingConfig = JSON.parse(readFile(mcpConfigPath));
+      } catch (error) {
+        result.errors.push(
+          `Failed to parse existing MCP config: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+        return result;
+      }
     }
     if (!existingConfig.mcpServers) existingConfig.mcpServers = {};
 
     for (const [serverName, serverConfig] of Object.entries(powerMcpConfig.mcpServers)) {
       if (existingConfig.mcpServers[serverName]) result.skipped.push(serverName);
-      else { existingConfig.mcpServers[serverName] = serverConfig; result.added.push(serverName); }
+      else {
+        existingConfig.mcpServers[serverName] = serverConfig;
+        result.added.push(serverName);
+      }
     }
 
     ensureDir(dirname(mcpConfigPath));
     writeFile(mcpConfigPath, JSON.stringify(existingConfig, null, 2));
   } catch (error) {
-    result.errors.push(`Failed to install MCP servers: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      `Failed to install MCP servers: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
   return result;
 }
 
-
-export async function installSteeringFiles(powerPath: string, steeringDir: string): Promise<InstallResult> {
+export async function installSteeringFiles(
+  powerPath: string,
+  steeringDir: string,
+): Promise<InstallResult> {
   const result = createInstallResult();
   try {
     const powerSteeringDir = join(powerPath, POWER_STEERING_DIR);
@@ -705,24 +841,42 @@ export async function installSteeringFiles(powerPath: string, steeringDir: strin
       const targetPath = join(steeringDir, fileName);
       if (fileExists(targetPath)) result.skipped.push(fileName);
       else {
-        try { writeFile(targetPath, readFile(sourcePath)); result.added.push(fileName); }
-        catch (error) { result.errors.push(`Failed to copy ${fileName}: ${error instanceof Error ? error.message : "Unknown error"}`); }
+        try {
+          writeFile(targetPath, readFile(sourcePath));
+          result.added.push(fileName);
+        } catch (error) {
+          result.errors.push(
+            `Failed to copy ${fileName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       }
     }
   } catch (error) {
-    result.errors.push(`Failed to install steering files: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      `Failed to install steering files: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
   return result;
 }
 
-export async function removeMcpServers(powerName: string, mcpConfigPath: string, cwd: string = process.cwd()): Promise<InstallResult> {
+export async function removeMcpServers(
+  powerName: string,
+  mcpConfigPath: string,
+  cwd: string = process.cwd(),
+): Promise<InstallResult> {
   const result = createInstallResult();
   try {
     if (!fileExists(mcpConfigPath)) return result;
 
     let existingConfig: { mcpServers?: Record<string, unknown> } = {};
-    try { existingConfig = JSON.parse(readFile(mcpConfigPath)); }
-    catch (error) { result.errors.push(`Failed to parse MCP config: ${error instanceof Error ? error.message : "Unknown error"}`); return result; }
+    try {
+      existingConfig = JSON.parse(readFile(mcpConfigPath));
+    } catch (error) {
+      result.errors.push(
+        `Failed to parse MCP config: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+      return result;
+    }
 
     if (!existingConfig.mcpServers) return result;
 
@@ -738,12 +892,18 @@ export async function removeMcpServers(powerName: string, mcpConfigPath: string,
     }
     writeFile(mcpConfigPath, JSON.stringify(existingConfig, null, 2));
   } catch (error) {
-    result.errors.push(`Failed to remove MCP servers: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      `Failed to remove MCP servers: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
   return result;
 }
 
-export async function removeSteeringFiles(powerName: string, steeringDir: string, cwd: string = process.cwd()): Promise<InstallResult> {
+export async function removeSteeringFiles(
+  powerName: string,
+  steeringDir: string,
+  cwd: string = process.cwd(),
+): Promise<InstallResult> {
   const result = createInstallResult();
   try {
     const powerPath = getKiroPowerInstallDir(powerName, cwd);
@@ -754,19 +914,30 @@ export async function removeSteeringFiles(powerName: string, steeringDir: string
     for (const fileName of files) {
       const targetPath = join(steeringDir, fileName);
       if (fileExists(targetPath)) {
-        try { removeFile(targetPath); result.added.push(fileName); }
-        catch (error) { result.errors.push(`Failed to remove ${fileName}: ${error instanceof Error ? error.message : "Unknown error"}`); }
+        try {
+          removeFile(targetPath);
+          result.added.push(fileName);
+        } catch (error) {
+          result.errors.push(
+            `Failed to remove ${fileName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       }
     }
   } catch (error) {
-    result.errors.push(`Failed to remove steering files: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      `Failed to remove steering files: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
   return result;
 }
 
-
-export function addInstalledPower(powerInfo: PowerInfo, components: InstalledComponents, cwd: string = process.cwd()): void {
-  const installedPowers = getInstalledPowers(cwd).filter(power => power.name !== powerInfo.name);
+export function addInstalledPower(
+  powerInfo: PowerInfo,
+  components: InstalledComponents,
+  cwd: string = process.cwd(),
+): void {
+  const installedPowers = getInstalledPowers(cwd).filter((power) => power.name !== powerInfo.name);
   installedPowers.push({
     name: powerInfo.name,
     version: powerInfo.version,
@@ -776,20 +947,32 @@ export function addInstalledPower(powerInfo: PowerInfo, components: InstalledCom
   saveInstalledPowers(installedPowers, cwd);
 }
 
-export async function installPowerFromLocal(powerName: string, cwd: string = process.cwd()): Promise<InstallResult> {
+export async function installPowerFromLocal(
+  powerName: string,
+  cwd: string = process.cwd(),
+): Promise<InstallResult> {
   const result = createInstallResult();
   try {
     const templatesDir = getLocalPowersTemplateDir(cwd);
     const sourcePath = join(templatesDir, powerName);
 
-    if (!existsSync(sourcePath)) { result.errors.push(`Power '${powerName}' not found in templates directory`); return result; }
+    if (!existsSync(sourcePath)) {
+      result.errors.push(`Power '${powerName}' not found in templates directory`);
+      return result;
+    }
 
     const validation = validatePowerPackage(sourcePath);
-    if (!validation.valid) { result.errors.push(...validation.errors); return result; }
+    if (!validation.valid) {
+      result.errors.push(...validation.errors);
+      return result;
+    }
     result.warnings.push(...validation.warnings);
 
     const powerInfo = createPowerInfoFromPackage(sourcePath);
-    if (!powerInfo) { result.errors.push(`Failed to read Power package info`); return result; }
+    if (!powerInfo) {
+      result.errors.push(`Failed to read Power package info`);
+      return result;
+    }
 
     // Copy entire power folder to .kiro/powers/<power-name>/
     const powerInstallDir = getKiroPowerInstallDir(powerName, cwd);
@@ -800,54 +983,81 @@ export async function installPowerFromLocal(powerName: string, cwd: string = pro
     // Merge MCP config into .kiro/settings/mcp.json
     const mcpConfigPath = join(cwd, ".kiro", "settings", "mcp.json");
     const mcpResult = await installMcpServers(powerInstallDir, mcpConfigPath);
-    result.added.push(...mcpResult.added.map(s => `MCP server: ${s}`));
-    result.skipped.push(...mcpResult.skipped.map(s => `MCP server: ${s}`));
+    result.added.push(...mcpResult.added.map((s) => `MCP server: ${s}`));
+    result.skipped.push(...mcpResult.skipped.map((s) => `MCP server: ${s}`));
     result.errors.push(...mcpResult.errors);
 
     // Copy steering files to .kiro/steering/
     const steeringDir = join(cwd, ".kiro", "steering");
     const steeringResult = await installSteeringFiles(powerInstallDir, steeringDir);
-    result.added.push(...steeringResult.added.map(f => `Steering file: ${f}`));
-    result.skipped.push(...steeringResult.skipped.map(f => `Steering file: ${f}`));
+    result.added.push(...steeringResult.added.map((f) => `Steering file: ${f}`));
+    result.skipped.push(...steeringResult.skipped.map((f) => `Steering file: ${f}`));
     result.errors.push(...steeringResult.errors);
 
-    addInstalledPower(powerInfo, { mcpServers: mcpResult.added, steeringFiles: steeringResult.added }, cwd);
+    addInstalledPower(
+      powerInfo,
+      { mcpServers: mcpResult.added, steeringFiles: steeringResult.added },
+      cwd,
+    );
     result.added.push(`Power: ${powerName}`);
   } catch (error) {
-    result.errors.push(error instanceof PowerError ? error.message : `Failed to install Power: ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      error instanceof PowerError
+        ? error.message
+        : `Failed to install Power: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
   return result;
 }
 
-export function validatePowerRemoval(powerName: string, cwd: string = process.cwd()): ValidationResult {
+export function validatePowerRemoval(
+  powerName: string,
+  cwd: string = process.cwd(),
+): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
-  if (!isPowerInstalled(powerName, cwd)) { result.errors.push(`Power '${powerName}' is not installed`); result.valid = false; return result; }
+  if (!isPowerInstalled(powerName, cwd)) {
+    result.errors.push(`Power '${powerName}' is not installed`);
+    result.valid = false;
+    return result;
+  }
 
   const metadata = getInstalledPowerMetadata(powerName, cwd);
   if (metadata?.components) {
-    if (metadata.components.mcpServers?.length) result.warnings.push(`Will remove ${metadata.components.mcpServers.length} MCP server(s)`);
-    if (metadata.components.steeringFiles?.length) result.warnings.push(`Will remove ${metadata.components.steeringFiles.length} steering file(s)`);
+    if (metadata.components.mcpServers?.length)
+      result.warnings.push(`Will remove ${metadata.components.mcpServers.length} MCP server(s)`);
+    if (metadata.components.steeringFiles?.length)
+      result.warnings.push(
+        `Will remove ${metadata.components.steeringFiles.length} steering file(s)`,
+      );
   }
   return result;
 }
 
-
-export async function uninstallPower(powerName: string, cwd: string = process.cwd()): Promise<InstallResult> {
+export async function uninstallPower(
+  powerName: string,
+  cwd: string = process.cwd(),
+): Promise<InstallResult> {
   const result = createInstallResult();
   try {
-    if (!isPowerInstalled(powerName, cwd)) { result.errors.push(`Power '${powerName}' is not installed`); return result; }
+    if (!isPowerInstalled(powerName, cwd)) {
+      result.errors.push(`Power '${powerName}' is not installed`);
+      return result;
+    }
 
     const metadata = getInstalledPowerMetadata(powerName, cwd);
-    if (!metadata) { result.errors.push(`Could not get metadata for Power '${powerName}'`); return result; }
+    if (!metadata) {
+      result.errors.push(`Could not get metadata for Power '${powerName}'`);
+      return result;
+    }
 
     const mcpConfigPath = join(cwd, ".kiro", "settings", "mcp.json");
     const mcpResult = await removeMcpServers(powerName, mcpConfigPath, cwd);
-    result.added.push(...mcpResult.added.map(s => `MCP server: ${s}`));
+    result.added.push(...mcpResult.added.map((s) => `MCP server: ${s}`));
     result.errors.push(...mcpResult.errors);
 
     const steeringDir = join(cwd, ".kiro", "steering");
     const steeringResult = await removeSteeringFiles(powerName, steeringDir, cwd);
-    result.added.push(...steeringResult.added.map(f => `Steering file: ${f}`));
+    result.added.push(...steeringResult.added.map((f) => `Steering file: ${f}`));
     result.errors.push(...steeringResult.errors);
 
     // Remove power folder from .kiro/powers/<power-name>/
@@ -857,16 +1067,21 @@ export async function uninstallPower(powerName: string, cwd: string = process.cw
       result.added.push(`Power folder: ${powerName}`);
     }
 
-    const updatedPowers = getInstalledPowers(cwd).filter(power => power.name !== powerName);
+    const updatedPowers = getInstalledPowers(cwd).filter((power) => power.name !== powerName);
     saveInstalledPowers(updatedPowers, cwd);
     result.added.push(`Power: ${powerName}`);
   } catch (error) {
-    result.errors.push(`Failed to uninstall Power '${powerName}': ${error instanceof Error ? error.message : "Unknown error"}`);
+    result.errors.push(
+      `Failed to uninstall Power '${powerName}': ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
   return result;
 }
 
-export async function uninstallPowerWithErrorHandling(powerName: string, cwd: string = process.cwd()): Promise<InstallResult> {
+export async function uninstallPowerWithErrorHandling(
+  powerName: string,
+  cwd: string = process.cwd(),
+): Promise<InstallResult> {
   return uninstallPower(powerName, cwd);
 }
 
@@ -879,7 +1094,11 @@ export function createPowerInfoFromPackage(powerPath: string): PowerInfo | null 
   const mcpConfig = readPowerMcpConfig(powerPath);
   if (mcpConfig?.mcpServers) {
     components.mcpServers = Object.entries(mcpConfig.mcpServers).map(([name, config]) => ({
-      name, description: config.description || `MCP server: ${name}`, command: config.command, args: config.args, env: config.env,
+      name,
+      description: config.description || `MCP server: ${name}`,
+      command: config.command,
+      args: config.args,
+      env: config.env,
     }));
   }
 
@@ -888,8 +1107,14 @@ export function createPowerInfoFromPackage(powerPath: string): PowerInfo | null 
     try {
       components.steeringFiles = readdirSync(steeringDir)
         .filter((file: string) => file.endsWith(".md"))
-        .map((file: string) => ({ name: file, description: `Steering file: ${file}`, category: "guide" }));
-    } catch { /* ignore */ }
+        .map((file: string) => ({
+          name: file,
+          description: `Steering file: ${file}`,
+          category: "guide",
+        }));
+    } catch {
+      /* ignore */
+    }
   }
 
   const examplesDir = join(powerPath, POWER_EXAMPLES_DIR);
@@ -897,8 +1122,14 @@ export function createPowerInfoFromPackage(powerPath: string): PowerInfo | null 
     try {
       components.examples = readdirSync(examplesDir)
         .filter((file: string) => file.endsWith(".md"))
-        .map((file: string) => ({ name: file, description: `Example: ${file}`, category: "example" }));
-    } catch { /* ignore */ }
+        .map((file: string) => ({
+          name: file,
+          description: `Example: ${file}`,
+          category: "example",
+        }));
+    } catch {
+      /* ignore */
+    }
   }
 
   return {
@@ -913,7 +1144,6 @@ export function createPowerInfoFromPackage(powerPath: string): PowerInfo | null 
     components,
   };
 }
-
 
 export function validatePowerCompatibility(powerInfo: PowerInfo): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
@@ -933,10 +1163,20 @@ export function validatePowerCompatibility(powerInfo: PowerInfo): ValidationResu
 
 export function validateRegistryManifest(data: unknown): ValidationResult {
   const result: ValidationResult = { valid: true, errors: [], warnings: [] };
-  if (!data || typeof data !== "object") { result.errors.push("Registry manifest must be an object"); result.valid = false; return result; }
+  if (!data || typeof data !== "object") {
+    result.errors.push("Registry manifest must be an object");
+    result.valid = false;
+    return result;
+  }
   const manifest = data as Record<string, unknown>;
-  if (!manifest.version || typeof manifest.version !== "string") { result.errors.push("Registry manifest missing or invalid 'version' field"); result.valid = false; }
-  if (!Array.isArray(manifest.powers)) { result.errors.push("Registry manifest missing or invalid 'powers' array"); result.valid = false; }
+  if (!manifest.version || typeof manifest.version !== "string") {
+    result.errors.push("Registry manifest missing or invalid 'version' field");
+    result.valid = false;
+  }
+  if (!Array.isArray(manifest.powers)) {
+    result.errors.push("Registry manifest missing or invalid 'powers' array");
+    result.valid = false;
+  }
   return result;
 }
 
@@ -947,21 +1187,33 @@ export function validateRegistryManifest(data: unknown): ValidationResult {
 export class PowerManagerImpl implements PowerManager {
   constructor(private cwd: string = process.cwd()) {}
 
-  async listInstalled(): Promise<InstalledPower[]> { return getInstalledPowers(this.cwd); }
-  isInstalled(powerName: string): boolean { return isPowerInstalled(powerName, this.cwd); }
-  getInstalledVersion(powerName: string): string | null { return getInstalledPowerVersion(powerName, this.cwd); }
+  async listInstalled(): Promise<InstalledPower[]> {
+    return getInstalledPowers(this.cwd);
+  }
+  isInstalled(powerName: string): boolean {
+    return isPowerInstalled(powerName, this.cwd);
+  }
+  getInstalledVersion(powerName: string): string | null {
+    return getInstalledPowerVersion(powerName, this.cwd);
+  }
 
   async uninstall(powerName: string): Promise<void> {
     const result = await uninstallPower(powerName, this.cwd);
-    if (result.errors.length > 0) throw new Error(`Failed to uninstall Power '${powerName}': ${result.errors.join(", ")}`);
+    if (result.errors.length > 0)
+      throw new Error(`Failed to uninstall Power '${powerName}': ${result.errors.join(", ")}`);
   }
 
-  async update(_powerName: string): Promise<void> { throw new Error("Power update functionality not yet implemented"); }
-  async getMetadata(powerName: string): Promise<PowerMetadata | null> { return getInstalledPowerMetadata(powerName, this.cwd); }
+  async update(_powerName: string): Promise<void> {
+    throw new Error("Power update functionality not yet implemented");
+  }
+  async getMetadata(powerName: string): Promise<PowerMetadata | null> {
+    return getInstalledPowerMetadata(powerName, this.cwd);
+  }
 
   async installLocalPower(powerPath: string, powerName: string): Promise<void> {
     const packageJsonPath = join(powerPath, "package.json");
-    if (!fileExists(packageJsonPath)) throw new Error(`Invalid Power: package.json not found at ${packageJsonPath}`);
+    if (!fileExists(packageJsonPath))
+      throw new Error(`Invalid Power: package.json not found at ${packageJsonPath}`);
 
     const powerInfo = createPowerInfoFromPackage(powerPath);
     if (!powerInfo) throw new Error(`Failed to read Power package info from ${powerPath}`);
@@ -984,12 +1236,14 @@ export class PowerManagerImpl implements PowerManager {
     if (mcpConfig?.mcpServers) components.mcpServers = Object.keys(mcpConfig.mcpServers);
 
     const powerSteeringDir = join(powerInstallDir, "steering");
-    if (existsSync(powerSteeringDir)) components.steeringFiles = readdirSync(powerSteeringDir).filter((f: string) => f.endsWith(".md"));
+    if (existsSync(powerSteeringDir))
+      components.steeringFiles = readdirSync(powerSteeringDir).filter((f: string) =>
+        f.endsWith(".md"),
+      );
 
     addInstalledPower(powerInfo, components, this.cwd);
   }
 }
-
 
 // ============================================================================
 // POWER DEV UTILITIES
@@ -1019,11 +1273,27 @@ export class PowerDevUtils {
 
   async validatePowerForDevelopment(powerPath: string): Promise<PowerStructureResult> {
     const result: PowerStructureResult = {
-      valid: true, errors: [], warnings: [], suggestions: [],
-      structure: { hasPackageJson: false, hasPowerMd: false, hasMcpConfig: false, hasSteeringFiles: false, hasExamples: false, hasServers: false, fileCount: { steering: 0, examples: 0, servers: 0 }, mcpServerCount: 0 },
+      valid: true,
+      errors: [],
+      warnings: [],
+      suggestions: [],
+      structure: {
+        hasPackageJson: false,
+        hasPowerMd: false,
+        hasMcpConfig: false,
+        hasSteeringFiles: false,
+        hasExamples: false,
+        hasServers: false,
+        fileCount: { steering: 0, examples: 0, servers: 0 },
+        mcpServerCount: 0,
+      },
     };
 
-    if (!fileExists(powerPath)) { result.errors.push("Power path does not exist"); result.valid = false; return result; }
+    if (!fileExists(powerPath)) {
+      result.errors.push("Power path does not exist");
+      result.valid = false;
+      return result;
+    }
 
     result.structure = await this.analyzePowerStructure(powerPath);
     const validation = validatePowerComprehensive(powerPath);
@@ -1036,20 +1306,38 @@ export class PowerDevUtils {
   }
 
   private async analyzePowerStructure(powerPath: string): Promise<PowerStructureInfo> {
-    const structure: PowerStructureInfo = { hasPackageJson: false, hasPowerMd: false, hasMcpConfig: false, hasSteeringFiles: false, hasExamples: false, hasServers: false, fileCount: { steering: 0, examples: 0, servers: 0 }, mcpServerCount: 0 };
+    const structure: PowerStructureInfo = {
+      hasPackageJson: false,
+      hasPowerMd: false,
+      hasMcpConfig: false,
+      hasSteeringFiles: false,
+      hasExamples: false,
+      hasServers: false,
+      fileCount: { steering: 0, examples: 0, servers: 0 },
+      mcpServerCount: 0,
+    };
 
     structure.hasPackageJson = fileExists(join(powerPath, POWER_PACKAGE_FILE));
     structure.hasPowerMd = fileExists(join(powerPath, POWER_MANIFEST_FILE));
     structure.hasMcpConfig = fileExists(join(powerPath, POWER_MCP_CONFIG_FILE));
 
     const steeringDir = join(powerPath, POWER_STEERING_DIR);
-    if (fileExists(steeringDir)) { structure.hasSteeringFiles = true; structure.fileCount.steering = this.countFiles(steeringDir, ".md"); }
+    if (fileExists(steeringDir)) {
+      structure.hasSteeringFiles = true;
+      structure.fileCount.steering = this.countFiles(steeringDir, ".md");
+    }
 
     const examplesDir = join(powerPath, POWER_EXAMPLES_DIR);
-    if (fileExists(examplesDir)) { structure.hasExamples = true; structure.fileCount.examples = this.countFiles(examplesDir, ".md"); }
+    if (fileExists(examplesDir)) {
+      structure.hasExamples = true;
+      structure.fileCount.examples = this.countFiles(examplesDir, ".md");
+    }
 
     const serversDir = join(powerPath, POWER_SERVERS_DIR);
-    if (fileExists(serversDir)) { structure.hasServers = true; structure.fileCount.servers = this.countFiles(serversDir, ".js", ".ts", ".py"); }
+    if (fileExists(serversDir)) {
+      structure.hasServers = true;
+      structure.fileCount.servers = this.countFiles(serversDir, ".js", ".ts", ".py");
+    }
 
     if (structure.hasMcpConfig) {
       const mcpConfig = readPowerMcpConfig(powerPath);
@@ -1062,19 +1350,24 @@ export class PowerDevUtils {
   private countFiles(dirPath: string, ...extensions: string[]): number {
     try {
       const fs = require("fs");
-      return fs.readdirSync(dirPath).filter((file: string) => extensions.some(ext => file.endsWith(ext))).length;
-    } catch { return 0; }
+      return fs
+        .readdirSync(dirPath)
+        .filter((file: string) => extensions.some((ext) => file.endsWith(ext))).length;
+    } catch {
+      return 0;
+    }
   }
 
   private generateDevelopmentSuggestions(structure: PowerStructureInfo): string[] {
     const suggestions: string[] = [];
-    if (!structure.hasPackageJson) suggestions.push("Create a package.json file with Power metadata");
+    if (!structure.hasPackageJson)
+      suggestions.push("Create a package.json file with Power metadata");
     if (!structure.hasPowerMd) suggestions.push("Create a POWER.md file with documentation");
-    if (!structure.hasMcpConfig && !structure.hasSteeringFiles && !structure.hasExamples) suggestions.push("Add at least one component: MCP servers, steering files, or examples");
+    if (!structure.hasMcpConfig && !structure.hasSteeringFiles && !structure.hasExamples)
+      suggestions.push("Add at least one component: MCP servers, steering files, or examples");
     return suggestions;
   }
 }
-
 
 export function createPowerDevUtils(cwd?: string): PowerDevUtils {
   return new PowerDevUtils(cwd);
@@ -1084,7 +1377,12 @@ export function createPowerDevUtils(cwd?: string): PowerDevUtils {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-export function getPowerComponentInfo(powerInfo: PowerInfo): { mcpServerCount: number; steeringFileCount: number; exampleCount: number; hasRequirements: boolean } {
+export function getPowerComponentInfo(powerInfo: PowerInfo): {
+  mcpServerCount: number;
+  steeringFileCount: number;
+  exampleCount: number;
+  hasRequirements: boolean;
+} {
   return {
     mcpServerCount: powerInfo.components.mcpServers.length,
     steeringFileCount: powerInfo.components.steeringFiles.length,
@@ -1097,8 +1395,10 @@ export function formatPowerRequirements(requirements?: PowerRequirements): strin
   if (!requirements) return [];
   const formatted: string[] = [];
   if (requirements.node) formatted.push(`Node.js ${requirements.node}`);
-  if (requirements.dependencies?.length) formatted.push(`Dependencies: ${requirements.dependencies.join(", ")}`);
-  if (requirements.environment?.length) formatted.push(`Environment: ${requirements.environment.join(", ")}`);
+  if (requirements.dependencies?.length)
+    formatted.push(`Dependencies: ${requirements.dependencies.join(", ")}`);
+  if (requirements.environment?.length)
+    formatted.push(`Environment: ${requirements.environment.join(", ")}`);
   return formatted;
 }
 
@@ -1107,7 +1407,10 @@ export const CacheUtils = {
     const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
-    while (size >= 1024 && unitIndex < units.length - 1) { size /= 1024; unitIndex++; }
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   },
   calculateHitRatio(stats: { hits: number; misses: number }): number {
@@ -1119,11 +1422,23 @@ export const CacheUtils = {
 // Backward compatibility aliases
 export { PowerDevUtils as PowerDevUtilsImpl };
 export const PowerTestUtils = {
-  async createTestPower(name: string, _options: { includeMcp?: boolean; includeSteering?: boolean; includeExamples?: boolean } = {}): Promise<{ path: string; cleanup: () => void }> {
+  async createTestPower(
+    name: string,
+    _options: { includeMcp?: boolean; includeSteering?: boolean; includeExamples?: boolean } = {},
+  ): Promise<{ path: string; cleanup: () => void }> {
     const os = require("os");
     const fs = require("fs");
     const tempDir = fs.mkdtempSync(join(os.tmpdir(), `test-power-${name}-`));
-    return { path: join(tempDir, name), cleanup: () => { try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch { /* ignore */ } } };
+    return {
+      path: join(tempDir, name),
+      cleanup: () => {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
+      },
+    };
   },
   async validateTestPower(powerPath: string): Promise<ValidationResult> {
     const devUtils = new PowerDevUtils();

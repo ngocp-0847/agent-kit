@@ -25,16 +25,18 @@ import {
   writeFile,
 } from "../utils/fs";
 import {
+  MCP_SERVER_TEMPLATES,
+  getMcpConfigPath,
   getMcpServerSetupInstructions,
   installMcpServers,
   promptMcpServerSelection,
 } from "../utils/mcp";
 import {
+  formatPowerRequirements,
+  getPowerComponentInfo,
   getPowerRegistry,
   installPowerFromLocal,
   isPowerInstalled,
-  getPowerComponentInfo,
-  formatPowerRequirements,
 } from "../utils/power";
 import {
   type TemplateManifest,
@@ -152,7 +154,25 @@ async function handleCopilotInstallation(
     }
   }
 
-  if (selectedCommands.length === 0 && selectedRules.length === 0 && selectedSkills.length === 0) {
+  // Prompt for MCP servers
+  let selectedMcpServers: string[] = [];
+  if (args.all) {
+    selectedMcpServers = Object.keys(MCP_SERVER_TEMPLATES);
+  } else {
+    const mcpSelection = await promptMcpServerSelection();
+    if (p.isCancel(mcpSelection)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+    selectedMcpServers = mcpSelection;
+  }
+
+  if (
+    selectedCommands.length === 0 &&
+    selectedRules.length === 0 &&
+    selectedSkills.length === 0 &&
+    selectedMcpServers.length === 0
+  ) {
     p.cancel("No templates selected");
     process.exit(0);
   }
@@ -165,6 +185,14 @@ async function handleCopilotInstallation(
       selectedRules,
       selectedSkills,
     );
+
+    // Install MCP servers
+    let mcpResult = { added: [] as string[], skipped: [] as string[] };
+    if (selectedMcpServers.length > 0) {
+      const mcpConfigPath = getMcpConfigPath("github-copilot", cwd);
+      mcpResult = installMcpServers(mcpConfigPath, selectedMcpServers, "github-copilot");
+    }
+
     s.stop("GitHub Copilot instructions installed");
 
     printDivider();
@@ -189,6 +217,31 @@ async function handleCopilotInstallation(
       for (const skill of result.skills) {
         console.log(pc.dim(`   └─ ${pc.green("+")} ${skill}`));
       }
+    }
+
+    if (mcpResult.added.length > 0 || mcpResult.skipped.length > 0) {
+      printSuccess(
+        `MCP servers: ${highlight(mcpResult.added.length.toString())} added${
+          mcpResult.skipped.length > 0
+            ? `, ${pc.yellow(mcpResult.skipped.length.toString())} skipped`
+            : ""
+        }`,
+      );
+      for (const server of mcpResult.added) {
+        console.log(pc.dim(`   └─ ${pc.green("+")} ${server}`));
+      }
+      for (const server of mcpResult.skipped) {
+        console.log(pc.dim(`   └─ ${pc.yellow("○")} ${server} (already exists)`));
+      }
+    }
+
+    // Show MCP setup instructions if servers were added
+    if (mcpResult.added.length > 0) {
+      console.log();
+      console.log(pc.cyan("📋 MCP Server Setup Instructions:"));
+      console.log();
+      const instructions = getMcpServerSetupInstructions(mcpResult.added);
+      console.log(pc.dim(instructions));
     }
 
     console.log();
@@ -501,7 +554,9 @@ async function handleKiroInstallation(
         selectedPowers = selection as PowerInfo[];
       }
     } catch (error) {
-      p.cancel(`Failed to fetch Power registry: ${error instanceof Error ? error.message : "Unknown error"}`);
+      p.cancel(
+        `Failed to fetch Power registry: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       process.exit(1);
     }
   }
@@ -610,7 +665,11 @@ async function handleKiroInstallation(
       }
     }
 
-    if (results.powers.added.length > 0 || results.powers.skipped.length > 0 || results.powers.errors.length > 0) {
+    if (
+      results.powers.added.length > 0 ||
+      results.powers.skipped.length > 0 ||
+      results.powers.errors.length > 0
+    ) {
       printSuccess(
         `Powers: ${highlight(results.powers.added.length.toString())} added${
           results.powers.skipped.length > 0
@@ -647,17 +706,19 @@ async function handleKiroInstallation(
       console.log();
       console.log(pc.cyan("🔌 Power Setup Instructions:"));
       console.log();
-      
+
       for (const powerName of results.powers.added) {
-        const powerInfo = selectedPowers.find(p => p.name === powerName);
+        const powerInfo = selectedPowers.find((p) => p.name === powerName);
         if (powerInfo?.setupInstructions) {
           console.log(pc.dim(`${powerInfo.displayName}:`));
           console.log(pc.dim(powerInfo.setupInstructions));
           console.log();
         }
       }
-      
-      console.log(pc.dim("Powers have been installed and configured. MCP servers are ready to use in Kiro."));
+
+      console.log(
+        pc.dim("Powers have been installed and configured. MCP servers are ready to use in Kiro."),
+      );
       console.log(pc.dim("Steering files are available in .kiro/steering/ directory."));
     }
 
@@ -881,7 +942,7 @@ async function promptPowerSelection(availablePowers: PowerInfo[]): Promise<Power
     options: availablePowers.map((power) => {
       const componentInfo = getPowerComponentInfo(power);
       const requirements = formatPowerRequirements(power.requirements);
-      
+
       let hint = `${componentInfo.mcpServerCount} MCP servers, ${componentInfo.steeringFileCount} steering files`;
       if (componentInfo.exampleCount > 0) {
         hint += `, ${componentInfo.exampleCount} examples`;
@@ -914,11 +975,13 @@ async function installPowers(
   for (let i = 0; i < selectedPowers.length; i++) {
     const powerInfo = selectedPowers[i];
     const progress = `(${i + 1}/${selectedPowers.length})`;
-    
+
     try {
       // Check if already installed
       if (isPowerInstalled(powerInfo.name, cwd)) {
-        console.log(pc.dim(`   ${progress} ${pc.yellow("○")} ${powerInfo.displayName} (already installed)`));
+        console.log(
+          pc.dim(`   ${progress} ${pc.yellow("○")} ${powerInfo.displayName} (already installed)`),
+        );
         result.skipped.push(powerInfo.name);
         continue;
       }
@@ -926,8 +989,12 @@ async function installPowers(
       // Show Power details
       const componentInfo = getPowerComponentInfo(powerInfo);
       console.log(pc.dim(`   ${progress} ${pc.blue("↓")} ${powerInfo.displayName}`));
-      console.log(pc.dim(`       └─ ${componentInfo.mcpServerCount} MCP servers, ${componentInfo.steeringFileCount} steering files`));
-      
+      console.log(
+        pc.dim(
+          `       └─ ${componentInfo.mcpServerCount} MCP servers, ${componentInfo.steeringFileCount} steering files`,
+        ),
+      );
+
       if (componentInfo.exampleCount > 0) {
         console.log(pc.dim(`       └─ ${componentInfo.exampleCount} examples included`));
       }
@@ -939,36 +1006,58 @@ async function installPowers(
       // Process installation results
       if (installResult.errors.length > 0) {
         console.log(pc.dim(`       └─ ${pc.red("✗")} Installation failed`));
-        result.errors.push(...installResult.errors.map(err => `${powerInfo.name}: ${err}`));
+        result.errors.push(...installResult.errors.map((err) => `${powerInfo.name}: ${err}`));
         continue;
       }
 
       // Show success details
       console.log(pc.dim(`       └─ ${pc.green("✓")} Installation completed successfully`));
-      
-      const addedMcpServers = installResult.added.filter(item => item.startsWith('MCP server:'));
-      const addedSteeringFiles = installResult.added.filter(item => item.startsWith('Steering file:'));
-      const skippedMcpServers = installResult.skipped.filter(item => item.startsWith('MCP server:'));
-      const skippedSteeringFiles = installResult.skipped.filter(item => item.startsWith('Steering file:'));
+
+      const addedMcpServers = installResult.added.filter((item) => item.startsWith("MCP server:"));
+      const addedSteeringFiles = installResult.added.filter((item) =>
+        item.startsWith("Steering file:"),
+      );
+      const skippedMcpServers = installResult.skipped.filter((item) =>
+        item.startsWith("MCP server:"),
+      );
+      const skippedSteeringFiles = installResult.skipped.filter((item) =>
+        item.startsWith("Steering file:"),
+      );
 
       if (addedMcpServers.length > 0) {
-        const serverNames = addedMcpServers.map(item => item.replace('MCP server: ', ''));
-        console.log(pc.dim(`       └─ ${pc.green("✓")} Added ${serverNames.length} MCP server(s): ${serverNames.join(", ")}`));
+        const serverNames = addedMcpServers.map((item) => item.replace("MCP server: ", ""));
+        console.log(
+          pc.dim(
+            `       └─ ${pc.green("✓")} Added ${serverNames.length} MCP server(s): ${serverNames.join(", ")}`,
+          ),
+        );
       }
-      
+
       if (skippedMcpServers.length > 0) {
-        const serverNames = skippedMcpServers.map(item => item.replace('MCP server: ', ''));
-        console.log(pc.dim(`       └─ ${pc.yellow("○")} Skipped ${serverNames.length} existing MCP server(s): ${serverNames.join(", ")}`));
+        const serverNames = skippedMcpServers.map((item) => item.replace("MCP server: ", ""));
+        console.log(
+          pc.dim(
+            `       └─ ${pc.yellow("○")} Skipped ${serverNames.length} existing MCP server(s): ${serverNames.join(", ")}`,
+          ),
+        );
       }
 
       if (addedSteeringFiles.length > 0) {
-        const fileNames = addedSteeringFiles.map(item => item.replace('Steering file: ', ''));
-        console.log(pc.dim(`       └─ ${pc.green("✓")} Added ${fileNames.length} steering file(s): ${fileNames.join(", ")}`));
+        const fileNames = addedSteeringFiles.map((item) => item.replace("Steering file: ", ""));
+        console.log(
+          pc.dim(
+            `       └─ ${pc.green("✓")} Added ${fileNames.length} steering file(s): ${fileNames.join(", ")}`,
+          ),
+        );
       }
-      
+
       if (skippedSteeringFiles.length > 0) {
-        const fileNames = skippedSteeringFiles.map(item => item.replace('Steering file: ', ''));
-        console.log(pc.dim(`       └─ ${pc.yellow("○")} Skipped ${fileNames.length} existing steering file(s): ${fileNames.join(", ")}`));
+        const fileNames = skippedSteeringFiles.map((item) => item.replace("Steering file: ", ""));
+        console.log(
+          pc.dim(
+            `       └─ ${pc.yellow("○")} Skipped ${fileNames.length} existing steering file(s): ${fileNames.join(", ")}`,
+          ),
+        );
       }
 
       // Show warnings if any
@@ -978,12 +1067,15 @@ async function installPowers(
         }
       }
 
-      console.log(pc.dim(`       └─ ${pc.green("✓")} ${powerInfo.displayName} installed successfully`));
+      console.log(
+        pc.dim(`       └─ ${pc.green("✓")} ${powerInfo.displayName} installed successfully`),
+      );
       result.added.push(powerInfo.name);
-
     } catch (error) {
       console.log(pc.dim(`       └─ ${pc.red("✗")} Failed to install ${powerInfo.displayName}`));
-      result.errors.push(`${powerInfo.name}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      result.errors.push(
+        `${powerInfo.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -1029,7 +1121,8 @@ export const initCommand = defineCommand({
     powers: {
       type: "boolean",
       alias: "p",
-      description: "Only initialize Powers - MCP servers and steering files for enhanced Kiro capabilities (Kiro only)",
+      description:
+        "Only initialize Powers - MCP servers and steering files for enhanced Kiro capabilities (Kiro only)",
       default: false,
     },
     all: {

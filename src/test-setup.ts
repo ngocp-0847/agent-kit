@@ -1,6 +1,6 @@
-import { beforeEach, afterEach } from 'vitest';
-import { rmSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach } from "vitest";
 
 // Global test cleanup
 const testDirs: string[] = [];
@@ -26,7 +26,7 @@ export function registerTestDir(dir: string) {
 
 // Helper to create temporary test directory
 export function createTempTestDir(name: string): string {
-  const tempDir = join(process.cwd(), 'temp-test', name);
+  const tempDir = join(process.cwd(), "temp-test", name);
   registerTestDir(tempDir);
   return tempDir;
 }

@@ -1,16 +1,13 @@
 /**
  * Example MCP Server for Kiro Power
- * 
+ *
  * This server demonstrates how to create MCP tools for a Kiro Power.
  * It includes basic tools for text manipulation as examples.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 // Create the MCP server
 const server = new Server(
@@ -22,12 +19,12 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
-  }
+  },
 );
 
 /**
  * Define available tools
- * 
+ *
  * Each tool has:
  * - name: Unique identifier for the tool
  * - description: What the tool does
@@ -52,7 +49,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "transform",
-        description: "Transform text using various operations like uppercase, lowercase, reverse, or get length.",
+        description:
+          "Transform text using various operations like uppercase, lowercase, reverse, or get length.",
         inputSchema: {
           type: "object",
           properties: {
@@ -71,7 +69,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "analyze",
-        description: "Analyze text and return statistics like word count, character count, and line count.",
+        description:
+          "Analyze text and return statistics like word count, character count, and line count.",
         inputSchema: {
           type: "object",
           properties: {
@@ -89,7 +88,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 /**
  * Handle tool calls
- * 
+ *
  * This is where the actual tool logic is implemented.
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -98,16 +97,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Echo tool - returns input unchanged
   if (name === "echo") {
     const { text } = args;
-    
+
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify({
-            success: true,
-            result: text,
-            timestamp: new Date().toISOString(),
-          }, null, 2),
+          text: JSON.stringify(
+            {
+              success: true,
+              result: text,
+              timestamp: new Date().toISOString(),
+            },
+            null,
+            2,
+          ),
         },
       ],
     };
@@ -139,13 +142,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [
         {
           type: "text",
-          text: JSON.stringify({
-            success: true,
-            operation,
-            input: text,
-            result,
-            timestamp: new Date().toISOString(),
-          }, null, 2),
+          text: JSON.stringify(
+            {
+              success: true,
+              operation,
+              input: text,
+              result,
+              timestamp: new Date().toISOString(),
+            },
+            null,
+            2,
+          ),
         },
       ],
     };
@@ -154,8 +161,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Analyze tool - returns text statistics
   if (name === "analyze") {
     const { text } = args;
-    
-    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+
+    const words = text
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 0);
     const lines = text.split(/\r?\n/);
     const characters = text.length;
     const charactersNoSpaces = text.replace(/\s/g, "").length;
@@ -164,16 +174,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [
         {
           type: "text",
-          text: JSON.stringify({
-            success: true,
-            statistics: {
-              wordCount: words.length,
-              lineCount: lines.length,
-              characterCount: characters,
-              characterCountNoSpaces: charactersNoSpaces,
+          text: JSON.stringify(
+            {
+              success: true,
+              statistics: {
+                wordCount: words.length,
+                lineCount: lines.length,
+                characterCount: characters,
+                characterCountNoSpaces: charactersNoSpaces,
+              },
+              timestamp: new Date().toISOString(),
             },
-            timestamp: new Date().toISOString(),
-          }, null, 2),
+            null,
+            2,
+          ),
         },
       ],
     };
@@ -184,7 +198,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 /**
  * Start the server
- * 
+ *
  * The server uses stdio transport for communication with Kiro.
  */
 async function main() {

@@ -109,7 +109,7 @@ agent-kit pull -t cursor -r -f         # Pull rules to Cursor with force
 
 ### `list`
 
-Display all available commands, rules, and skills in your project.
+Display all available commands, rules, skills, and MCP servers in your project.
 
 ```bash
 agent-kit list           # List everything
@@ -117,8 +117,31 @@ agent-kit list -c        # Only list commands
 agent-kit list -r        # Only list rules
 agent-kit list -s        # Only list skills
 agent-kit list -p        # Only list powers
+agent-kit list -m        # Only list MCP servers
 agent-kit list -v        # Verbose mode with file paths
 ```
+
+### `mcp`
+
+Manage MCP (Model Context Protocol) servers for AI IDEs. Supports adding, listing, and checking status of MCP servers.
+
+```bash
+agent-kit mcp                        # Show available commands
+agent-kit mcp --add                  # Interactive: add MCP servers
+agent-kit mcp --list                 # List available MCP servers
+agent-kit mcp --status               # Show status of configured servers
+agent-kit mcp --info context7        # Show information about a specific server
+agent-kit mcp -t cursor              # Target Cursor IDE
+agent-kit mcp -t github-copilot      # Target GitHub Copilot (VSCode)
+agent-kit mcp -t kiro                # Target Kiro
+agent-kit mcp -t google-antigravity  # Target Google Antigravity
+```
+
+**Available MCP Servers:**
+| Server | Description |
+| ------ | ----------- |
+| `context7` | Upstash Context7 MCP server for vector search and context management |
+| `serena` | Serena MCP server for enhanced AI capabilities |
 
 ### `remove`
 
@@ -188,6 +211,8 @@ your-project/
 
 ```
 your-project/
+├── .vscode/
+│   └── mcp.json                   # MCP server configuration (VS Code format)
 ├── .github/
 │   ├── copilot-instructions.md    # Main instructions file
 │   └── copilot-instructions/      # Organized instructions
@@ -215,7 +240,9 @@ your-project/
         └── ... (other skills)
 ```
 
-> **Note**: Skills are created in `.claude/skills/` to leverage GitHub Copilot's [Agent Skills feature](https://github.blog/changelog/2025-12-18-github-copilot-now-supports-agent-skills/), which automatically discovers and loads skills from this directory when relevant to your tasks.
+> **Note**: 
+> - Skills are created in `.claude/skills/` to leverage GitHub Copilot's [Agent Skills feature](https://github.blog/changelog/2025-12-18-github-copilot-now-supports-agent-skills/), which automatically discovers and loads skills from this directory when relevant to your tasks.
+> - MCP servers are configured in `.vscode/mcp.json` following the [VS Code MCP specification](https://code.visualstudio.com/docs/copilot/customization/mcp-servers), with support for secure input variables.
 
 ### Windsurf
 

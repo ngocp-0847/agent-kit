@@ -1,16 +1,16 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import debug from "debug";
 /**
  * Shared browser utilities for Chrome DevTools scripts
  */
-import puppeteer from 'puppeteer';
-import debug from 'debug';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import puppeteer from "puppeteer";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ENDPOINT_FILE = path.join(__dirname, '..', '.browser-endpoint');
+const ENDPOINT_FILE = path.join(__dirname, "..", ".browser-endpoint");
 
-const log = debug('chrome-devtools:browser');
+const log = debug("chrome-devtools:browser");
 
 let browserInstance = null;
 let pageInstance = null;
@@ -20,19 +20,19 @@ let pageInstance = null;
  */
 export async function getBrowser(options = {}) {
   if (browserInstance && browserInstance.isConnected()) {
-    log('Reusing existing browser instance');
+    log("Reusing existing browser instance");
     return browserInstance;
   }
 
   // Check for persistent browser endpoint
   if (!options.browserUrl && !options.wsEndpoint && fs.existsSync(ENDPOINT_FILE)) {
     try {
-      const wsEndpoint = fs.readFileSync(ENDPOINT_FILE, 'utf8').trim();
-      log('Found persistent browser endpoint, connecting...');
+      const wsEndpoint = fs.readFileSync(ENDPOINT_FILE, "utf8").trim();
+      log("Found persistent browser endpoint, connecting...");
       browserInstance = await puppeteer.connect({ browserWSEndpoint: wsEndpoint });
       return browserInstance;
     } catch (error) {
-      log('Failed to connect to persistent browser, launching new one:', error.message);
+      log("Failed to connect to persistent browser, launching new one:", error.message);
       // Clean up stale endpoint file
       if (fs.existsSync(ENDPOINT_FILE)) {
         fs.unlinkSync(ENDPOINT_FILE);
@@ -43,26 +43,26 @@ export async function getBrowser(options = {}) {
   const launchOptions = {
     headless: options.headless !== false,
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      ...(options.args || [])
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      ...(options.args || []),
     ],
     defaultViewport: options.viewport || {
       width: 1920,
-      height: 1080
+      height: 1080,
     },
-    ...options
+    ...options,
   };
 
   if (options.browserUrl || options.wsEndpoint) {
-    log('Connecting to existing browser');
+    log("Connecting to existing browser");
     browserInstance = await puppeteer.connect({
       browserURL: options.browserUrl,
-      browserWSEndpoint: options.wsEndpoint
+      browserWSEndpoint: options.wsEndpoint,
     });
   } else {
-    log('Launching new browser');
+    log("Launching new browser");
     browserInstance = await puppeteer.launch(launchOptions);
   }
 
@@ -74,7 +74,7 @@ export async function getBrowser(options = {}) {
  */
 export async function getPage(browser) {
   if (pageInstance && !pageInstance.isClosed()) {
-    log('Reusing existing page');
+    log("Reusing existing page");
     return pageInstance;
   }
 
@@ -108,11 +108,11 @@ export function parseArgs(argv, options = {}) {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
 
-    if (arg.startsWith('--')) {
+    if (arg.startsWith("--")) {
       const key = arg.slice(2);
       const nextArg = argv[i + 1];
 
-      if (nextArg && !nextArg.startsWith('--')) {
+      if (nextArg && !nextArg.startsWith("--")) {
         args[key] = nextArg;
         i++;
       } else {
@@ -135,10 +135,16 @@ export function outputJSON(data) {
  * Output error
  */
 export function outputError(error) {
-  console.error(JSON.stringify({
-    success: false,
-    error: error.message,
-    stack: error.stack
-  }, null, 2));
+  console.error(
+    JSON.stringify(
+      {
+        success: false,
+        error: error.message,
+        stack: error.stack,
+      },
+      null,
+      2,
+    ),
+  );
   process.exit(1);
 }
