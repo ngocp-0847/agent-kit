@@ -88,6 +88,93 @@ export interface McpServerTemplate {
 
 // Predefined MCP server templates
 export const MCP_SERVER_TEMPLATES: Record<string, McpServerTemplate> = {
+  "chrome-devtools": {
+    name: "chrome-devtools",
+    displayName: "Chrome DevTools",
+    description:
+      "Chrome DevTools MCP server for browser automation, debugging, and performance analysis",
+    config: {
+      command: "npx",
+      args: ["-y", "chrome-devtools-mcp@latest"],
+      env: {},
+      disabled: false,
+      autoApprove: [],
+    },
+    vsCodeConfig: {
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "chrome-devtools-mcp@latest"],
+    },
+    setupInstructions: `
+⚠️  REQUIREMENTS:
+• Node.js >= 20.19 (latest maintenance LTS)
+• Chrome browser (current stable version or newer)
+
+To use Chrome DevTools MCP server:
+
+1. Ensure you have Node.js 20.19+ installed:
+   node --version  # Should show v20.19.x or higher
+
+2. Ensure Chrome is installed on your system.
+
+3. The server will be automatically available after installation.
+
+Chrome DevTools MCP provides powerful browser tools:
+• Performance: performance_start_trace, performance_stop_trace, performance_analyze_insight
+• Input automation: click, drag, fill, fill_form, hover, press_key
+• Navigation: navigate_page, new_page, close_page, list_pages, select_page
+• Network: list_network_requests, get_network_request
+• Debugging: evaluate_script, list_console_messages, take_screenshot, take_snapshot
+• Emulation: emulate, resize_page
+
+For more information: https://github.com/ChromeDevTools/chrome-devtools-mcp
+    `.trim(),
+    customPrompts: [
+      {
+        id: "channel",
+        type: "select",
+        message: "Select Chrome channel to use:",
+        options: [
+          { value: "stable", label: "Stable", hint: "Chrome stable channel (recommended)" },
+          { value: "beta", label: "Beta", hint: "Chrome beta channel" },
+          { value: "canary", label: "Canary", hint: "Chrome canary channel (latest features)" },
+          { value: "dev", label: "Dev", hint: "Chrome dev channel" },
+        ],
+        defaultValue: "stable",
+        argPrefix: "--channel",
+      },
+      {
+        id: "mode",
+        type: "select",
+        message: "Select browser mode:",
+        options: [
+          { value: "headed", label: "Headed", hint: "Browser window visible (default)" },
+          { value: "headless", label: "Headless", hint: "No visible browser window" },
+        ],
+        defaultValue: "headed",
+        argPrefix: "",
+      },
+      {
+        id: "isolated",
+        type: "select",
+        message: "Use isolated user data directory?",
+        options: [
+          {
+            value: "false",
+            label: "No",
+            hint: "Share profile across sessions (default)",
+          },
+          {
+            value: "true",
+            label: "Yes",
+            hint: "Use temporary profile, cleaned up after browser closes",
+          },
+        ],
+        defaultValue: "false",
+        argPrefix: "",
+      },
+    ],
+  },
   context7: {
     name: "context7",
     displayName: "Context7",
@@ -441,6 +528,12 @@ export async function promptServerOptions(serverName: string): Promise<string[] 
           additionalArgs.push("--headless");
         }
         // headed mode is default, no flag needed
+      } else if (prompt.id === "isolated") {
+        // Only add --isolated flag if isolated mode selected
+        if (result === "true") {
+          additionalArgs.push("--isolated");
+        }
+        // non-isolated mode is default, no flag needed
       } else if (prompt.argPrefix && result) {
         additionalArgs.push(prompt.argPrefix, result as string);
       }

@@ -48,340 +48,168 @@ ak init
 
 ### `init`
 
-Initialize commands, rules, and skills in your project with curated templates. Supports all major AI coding agents.
+Initialize commands, rules, and skills for your AI coding agent.
 
 ```bash
-agent-kit init                       # Interactive: choose target agent
-agent-kit init -t cursor             # Initialize for Cursor IDE (.cursor/)
-agent-kit init -t github-copilot     # Initialize for GitHub Copilot (.github/copilot-instructions/)
-agent-kit init -t windsurf           # Initialize for Windsurf (.windsurf/)
-agent-kit init -t kiro               # Initialize for Kiro (.kiro/steering/)
-agent-kit init -c                    # Only initialize commands
-agent-kit init -r                    # Only initialize rules
-agent-kit init -s                    # Only initialize skills
-agent-kit init -m                    # Only initialize MCP servers (Kiro only)
-agent-kit init -p                    # Only initialize Powers (Kiro only)
-agent-kit init -f                    # Force overwrite existing files
-agent-kit init -a                    # Install all templates without selection prompts
+agent-kit init                       # Interactive mode
+agent-kit init -t cursor             # Cursor IDE
+agent-kit init -t github-copilot     # GitHub Copilot (VSCode)
+agent-kit init -t windsurf           # Windsurf
+agent-kit init -t kiro               # Kiro
+agent-kit init -c                    # Only commands
+agent-kit init -r                    # Only rules
+agent-kit init -s                    # Only skills
+agent-kit init -f                    # Force overwrite
+agent-kit init -a                    # Install all without prompts
 ```
-
-**Target options:**
-- `cursor` - Creates `.cursor/` directory structure for Cursor IDE
-- `github-copilot` - Creates `.github/copilot-instructions.md` and related structure for GitHub Copilot. Skills are created in `.claude/skills/` for automatic discovery by GitHub Copilot Agent Skills
-- `windsurf` - Creates `.windsurf/` directory with rules and workflows for Windsurf
-- `kiro` - Creates `.kiro/steering/` directory with steering files for Kiro
 
 ### `add`
 
-Interactively create a new command, rule, or skill with a starter template. Supports targeting different AI coding agents.
+Create a new command, rule, or skill.
 
 ```bash
-agent-kit add                              # Interactive mode (prompts for target)
-agent-kit add --target cursor              # Add to Cursor IDE
-agent-kit add --target github-copilot      # Add to GitHub Copilot
-agent-kit add --target windsurf            # Add to Windsurf
-agent-kit add --target kiro                # Add to Kiro
-agent-kit add -t command                   # Add a command
-agent-kit add -t rule                      # Add a rule
-agent-kit add -t skill                     # Add a skill
-agent-kit add -t command -n my-command     # Quick create
-agent-kit add --target cursor -t rule -n my-rule  # Full example
+agent-kit add                              # Interactive mode
+agent-kit add -t command -n my-command     # Quick create command
+agent-kit add -t rule -n my-rule           # Quick create rule
+agent-kit add -t skill -n my-skill         # Quick create skill
+agent-kit add --target cursor -t rule      # Target specific IDE
 ```
 
 ### `list`
 
-Display all available commands, rules, skills, and MCP servers in your project.
+Display available commands, rules, skills, and MCP servers.
 
 ```bash
 agent-kit list           # List everything
-agent-kit list -c        # Only list commands
-agent-kit list -r        # Only list rules
-agent-kit list -s        # Only list skills
-agent-kit list -p        # Only list powers
-agent-kit list -m        # Only list MCP servers
-agent-kit list -v        # Verbose mode with file paths
+agent-kit list -c        # Only commands
+agent-kit list -s        # Only skills
+agent-kit list -v        # Verbose with paths
 ```
 
 ### `mcp`
 
-Manage MCP (Model Context Protocol) servers for AI IDEs. Supports adding, listing, and checking status of MCP servers.
+Manage MCP (Model Context Protocol) servers for AI IDEs.
 
 ```bash
-agent-kit mcp                        # Show available commands
-agent-kit mcp --add                  # Interactive: add MCP servers
-agent-kit mcp --list                 # List available MCP servers
-agent-kit mcp --status               # Show status of configured servers
-agent-kit mcp --info context7        # Show information about a specific server
-agent-kit mcp -t cursor              # Target Cursor IDE
-agent-kit mcp -t github-copilot      # Target GitHub Copilot (VSCode)
-agent-kit mcp -t kiro                # Target Kiro
-agent-kit mcp -t google-antigravity  # Target Google Antigravity
+agent-kit mcp                              # Show available commands
+agent-kit mcp add                          # Interactive server selection
+agent-kit mcp add chrome-devtools          # Add single server
+agent-kit mcp add context7 chrome-devtools # Add multiple servers
+agent-kit mcp list                         # List available servers
+agent-kit mcp status                       # Show configured servers
+agent-kit mcp info chrome-devtools         # Show server details
+agent-kit mcp remove context7              # Remove single server
+agent-kit mcp remove context7 serena       # Remove multiple servers
+agent-kit mcp add -t github-copilot        # Target specific IDE
 ```
 
 **Available MCP Servers:**
+
 | Server | Description |
 | ------ | ----------- |
-| `context7` | Upstash Context7 MCP server for vector search and context management |
-| `serena` | Serena MCP server for enhanced AI capabilities |
+| `chrome-devtools` | Chrome DevTools for browser automation, debugging, and performance analysis |
+| `context7` | Context7 for fetching up-to-date library documentation |
+| `serena` | IDE-like semantic code retrieval and editing tools |
+| `playwright` | Browser automation via Playwright for web testing |
 
 ### `remove`
 
-Remove a command, rule, or skill from your project. Supports targeting different AI coding agents.
+Remove a command, rule, or skill.
 
 ```bash
-agent-kit remove                        # Interactive mode (prompts for target)
-agent-kit remove --target cursor        # Remove from Cursor IDE
-agent-kit remove --target github-copilot       # Remove from GitHub Copilot
-agent-kit remove --target windsurf             # Remove from Windsurf
-agent-kit remove --target kiro                 # Remove from Kiro
-agent-kit remove -t command -n my-command      # Quick remove
-agent-kit remove -f                     # Skip confirmation
-agent-kit remove --target cursor -t rule -n my-rule -f  # Full example
+agent-kit remove                           # Interactive mode
+agent-kit remove -t command -n my-command  # Quick remove
+agent-kit remove -f                        # Skip confirmation
 ```
 
 ## 📁 Directory Structure
 
-After running `agent-kit init`, your project will have different structures depending on the target agent:
-
-### Cursor IDE (default)
+### Cursor IDE
 
 ```
-your-project/
-└── .cursor/
-    ├── commands/              # Prompt templates (.md)
-    │   ├── docs.md
-    │   ├── explain.md
-    │   ├── fix.md
-    │   ├── implement.md
-    │   ├── refactor.md
-    │   ├── review.md
-    │   └── test.md
-    ├── rules/                 # AI behavior rules (.mdc)
-    │   ├── coding-style.mdc
-    │   ├── git.mdc
-    │   └── toc.mdc
-    └── skills/                # Comprehensive guides with references
-        ├── aesthetic/
-        │   ├── SKILL.mdc
-        │   ├── assets/
-        │   └── references/
-        ├── backend-development/
-        │   ├── SKILL.mdc
-        │   └── references/
-        ├── frontend-design/
-        │   ├── SKILL.mdc
-        │   └── references/
-        ├── frontend-development/
-        │   ├── SKILL.mdc
-        │   └── resources/
-        ├── problem-solving/
-        │   ├── SKILL.mdc
-        │   └── references/
-        ├── research/
-        │   └── SKILL.mdc
-        ├── sequential-thinking/
-        │   ├── SKILL.mdc
-        │   ├── references/
-        │   └── scripts/
-        └── ui-styling/
-            ├── SKILL.mdc
-            └── references/
+.cursor/
+├── commands/     # Prompt templates (.md)
+├── rules/        # AI behavior rules (.mdc)
+└── skills/       # Comprehensive guides
 ```
 
 ### GitHub Copilot
 
 ```
-your-project/
-├── .vscode/
-│   └── mcp.json                   # MCP server configuration (VS Code format)
-├── .github/
-│   ├── copilot-instructions.md    # Main instructions file
-│   └── copilot-instructions/      # Organized instructions
-│       ├── commands/              # Prompt templates (.md)
-│       │   ├── docs.md
-│       │   ├── explain.md
-│       │   ├── fix.md
-│       │   ├── implement.md
-│       │   ├── refactor.md
-│       │   ├── review.md
-│       │   └── test.md
-│       └── rules/                 # AI behavior rules (.md)
-│           ├── coding-style.md
-│           ├── git.md
-│           └── toc.md
-└── .claude/
-    └── skills/                    # Agent Skills (auto-discovered by GitHub Copilot)
-        ├── aesthetic/
-        │   ├── SKILL.md
-        │   ├── assets/
-        │   └── references/
-        ├── backend-development/
-        │   ├── SKILL.md
-        │   └── references/
-        └── ... (other skills)
+.vscode/mcp.json              # MCP server configuration
+.github/
+├── copilot-instructions.md   # Main instructions
+└── copilot-instructions/
+    ├── commands/             # Prompt templates
+    └── rules/                # AI behavior rules
+.claude/skills/               # Agent Skills (auto-discovered)
 ```
-
-> **Note**: 
-> - Skills are created in `.claude/skills/` to leverage GitHub Copilot's [Agent Skills feature](https://github.blog/changelog/2025-12-18-github-copilot-now-supports-agent-skills/), which automatically discovers and loads skills from this directory when relevant to your tasks.
-> - MCP servers are configured in `.vscode/mcp.json` following the [VS Code MCP specification](https://code.visualstudio.com/docs/copilot/customization/mcp-servers), with support for secure input variables.
 
 ### Windsurf
 
 ```
-your-project/
-└── .windsurf/
-    ├── workflows/                 # Workflow templates (.md)
-    │   ├── docs.md
-    │   ├── explain.md
-    │   ├── fix.md
-    │   ├── implement.md
-    │   ├── refactor.md
-    │   ├── review.md
-    │   └── test.md
-    ├── rules/                     # AI behavior rules (.md)
-    │   ├── coding-style.md
-    │   ├── git.md
-    │   └── toc.md
-    └── skills/                    # Comprehensive guides with references
-        ├── aesthetic/
-        │   ├── SKILL.md
-        │   ├── assets/
-        │   └── references/
-        ├── backend-development/
-        │   ├── SKILL.md
-        │   └── references/
-        └── ... (other skills)
+.windsurf/
+├── workflows/    # Workflow templates
+├── rules/        # AI behavior rules
+└── skills/       # Comprehensive guides
 ```
 
 ### Kiro
 
 ```
-your-project/
-└── .kiro/
-    ├── settings/
-    │   └── mcp.json               # MCP server configurations
-    ├── steering/                  # Steering files (.md)
-    │   ├── docs.md
-    │   ├── explain.md
-    │   ├── fix.md
-    │   ├── implement.md
-    │   ├── refactor.md
-    │   ├── review.md
-    │   ├── test.md
-    │   ├── coding-style.md
-    │   ├── git.md
-    │   └── skills/                # Comprehensive guides with references
-    │       ├── aesthetic/
-    │       │   ├── SKILL.md
-    │       │   ├── assets/
-    │       │   └── references/
-    │       ├── backend-development/
-    │       │   ├── SKILL.md
-    │       │   └── references/
-    │       └── ... (other skills)
-    └── powers/
-        └── installed.json         # Installed Powers tracking
+.kiro/
+├── settings/mcp.json    # MCP server configs
+├── steering/            # Steering files + skills
+└── powers/              # Installed Powers
 ```
-
-> **Note**: Powers for Kiro include MCP servers (configured in `.kiro/settings/mcp.json`) and steering files (copied to `.kiro/steering/`). Use `agent-kit init -p` to install Powers or `agent-kit list -p` to see installed Powers.
 
 ## 🎯 Included Templates
 
 ### Commands
 
-| Command     | Description                                    |
-| ----------- | ---------------------------------------------- |
-| `docs`      | Create or update documentation                 |
-| `explain`   | Clear technical explanations                   |
-| `fix`       | Diagnose and fix bugs with root cause analysis |
-| `implement` | Convert feature ideas into actionable plans    |
-| `refactor`  | Improve code quality without changing behavior |
-| `review`    | Comprehensive code review checklist            |
-| `test`      | Generate comprehensive test suites             |
+`docs` · `explain` · `fix` · `implement` · `refactor` · `review` · `test`
 
 ### Rules
 
-| Rule           | Description                                |
-| -------------- | ------------------------------------------ |
-| `coding-style` | Core coding conventions and best practices |
-| `git`          | Commit and branching conventions           |
-| `toc`          | Table of contents for rule selection      |
+`coding-style` · `git` · `toc`
 
 ### Skills
 
-| Skill                  | Description                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `aesthetic`            | Visual design principles, storytelling, and micro-interactions for distinctive interfaces |
-| `backend-development`  | API design, architecture, authentication, security, and DevOps patterns           |
-| `frontend-design`      | Create distinctive, production-grade interfaces with bold aesthetics (avoid generic AI slop) |
-| `frontend-development` | React/TypeScript patterns: Suspense, lazy loading, TanStack Query/Router, MUI v7, file organization |
-| `problem-solving`      | Techniques for complexity spirals, innovation blocks, meta-patterns, and scale testing |
-| `research`             | Systematic research methodology for technical solutions with report generation     |
-| `sequential-thinking`  | Structured problem-solving with revision, branching, and hypothesis verification   |
-| `ui-styling`           | shadcn/ui components, Tailwind CSS utilities, theming, accessibility, and canvas-based visual design |
+| Skill | Description |
+| ----- | ----------- |
+| `aesthetic` | Visual design, storytelling, micro-interactions |
+| `backend-development` | API design, architecture, auth, security |
+| `chrome-devtools` | Browser debugging with Chrome DevTools MCP |
+| `frontend-design` | Distinctive UI design (avoid generic AI slop) |
+| `frontend-development` | React/TypeScript, TanStack, MUI patterns |
+| `gherkin-e2e-automation` | E2E testing with Gherkin syntax |
+| `mermaidjs-v11` | Diagrams and flowcharts with Mermaid.js |
+| `problem-solving` | Techniques for complexity and innovation |
+| `research` | Systematic research methodology |
+| `sequential-thinking` | Structured problem-solving with MCP |
+| `skill-builder` | Create new skills for Agent Kit |
+| `spec-builder` | Generate specifications from requirements |
+| `ui-styling` | shadcn/ui, Tailwind CSS, theming |
 
-### Powers (Kiro Only)
+### Powers (Kiro)
 
-Powers are specialized packages for Kiro that include MCP servers, steering files, and documentation for specific domains.
-
-| Power                  | Description                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `nestjs-swagger-power` | Scans NestJS projects and generates Swagger/OpenAPI documentation                  |
-
-#### Power Features
-
-- **MCP Servers**: Model Context Protocol servers that provide tools and capabilities to Kiro
-- **Steering Files**: Context and instructions for specific domains
-- **Examples**: Usage examples and best practices
-- **Setup Instructions**: Guidance for required environment variables and dependencies
-
-#### Installing Powers
+Specialized packages with MCP servers and steering files.
 
 ```bash
-# Interactive Power selection during init
-agent-kit init -t kiro
-
-# Install only Powers
-agent-kit init -t kiro -p
-
-# Install all Powers without prompts
-agent-kit init -t kiro -p -a
-
-# List installed Powers
-agent-kit list -p
-
-# Remove a Power
-agent-kit remove --target kiro -t power
+agent-kit init -t kiro -p    # Install Powers
+agent-kit list -p            # List installed Powers
 ```
 
 ## 🛠️ Development
 
 ```bash
-# Clone the repo
 git clone https://github.com/duongductrong/agent-kit.git
-cd agent-kit
-
-# Install dependencies
-pnpm install
-
-# Build
+cd agent-kit && pnpm install
 pnpm build
-
-# Run locally
-node dist/cli.js
-
-# Development mode (watch)
-pnpm dev
+pnpm dev          # Watch mode
 ```
 
-### Requirements
-
-- Node.js >= 18.0.0
-
-### Documentation
-
-- [Power Development Guide](docs/power-development.md) - How to create custom Kiro Powers
-- [Power Troubleshooting](docs/power-troubleshooting.md) - Common issues and solutions
+**Requirements:** Node.js >= 18.0.0
 
 ## 📄 License
 
