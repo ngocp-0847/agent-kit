@@ -211,67 +211,6 @@ describe("CLI Flag Combinations and Interactions", () => {
     });
   });
 
-  describe("Pull Command Flag Combinations", () => {
-    it("should handle pull with Power updates", async () => {
-      // Install initial version
-      const powerV1Dir = join(testDir, "updatable-power-v1");
-      createTestPowerStructure(powerV1Dir, "updatable-power", "1.0.0");
-      await powerManager.installLocalPower(powerV1Dir, "updatable-power");
-
-      // Verify initial installation
-      let installedPowers = await powerManager.listInstalled();
-      expect(installedPowers[0].version).toBe("1.0.0");
-
-      // Create updated version
-      const powerV2Dir = join(testDir, "updatable-power-v2");
-      createTestPowerStructure(powerV2Dir, "updatable-power", "2.0.0");
-
-      // Add new steering file in v2
-      const steeringDir = join(powerV2Dir, "steering");
-      writeFileSync(
-        join(steeringDir, "updatable-power-new-guide.md"),
-        "# New Guide\n\nNew functionality in v2.0.0",
-      );
-
-      // Simulate pull update
-      await powerManager.update("updatable-power");
-
-      // Verify version is updated
-      installedPowers = await powerManager.listInstalled();
-      expect(installedPowers[0].version).toBe("2.0.0");
-
-      // Verify new steering file is added
-      const newSteeringPath = join(testDir, ".kiro", "steering", "updatable-power-new-guide.md");
-      expect(existsSync(newSteeringPath)).toBe(true);
-    });
-
-    it("should handle pull --all for updating all Powers", async () => {
-      // Install multiple Powers
-      const powerNames = ["update-power-1", "update-power-2"];
-
-      for (const powerName of powerNames) {
-        const powerDir = join(testDir, `${powerName}-v1`);
-        createTestPowerStructure(powerDir, powerName, "1.0.0");
-        await powerManager.installLocalPower(powerDir, powerName);
-      }
-
-      // Verify initial versions
-      let installedPowers = await powerManager.listInstalled();
-      expect(installedPowers).toHaveLength(2);
-      expect(installedPowers.every((p) => p.version === "1.0.0")).toBe(true);
-
-      // Simulate updating all Powers
-      for (const powerName of powerNames) {
-        await powerManager.update(powerName);
-      }
-
-      // Note: In a real scenario, this would fetch from registry
-      // For this test, we're just verifying the update mechanism works
-      installedPowers = await powerManager.listInstalled();
-      expect(installedPowers).toHaveLength(2);
-    });
-  });
-
   describe("Complex Flag Interactions", () => {
     it("should handle init --all followed by selective remove", async () => {
       // Install all components including Powers

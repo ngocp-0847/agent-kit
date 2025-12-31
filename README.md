@@ -41,7 +41,6 @@ ak init
 - **📋 Rules** - Project-specific AI behavior guidelines
 - **🎓 Skills** - Comprehensive guides with references for specialized domains
 - **⚡ Powers** - MCP servers and steering files for enhanced Kiro capabilities
-- **🔄 Sync** - Keep configurations updated from the community
 - **🎯 Multi-Agent** - Support for Cursor IDE, GitHub Copilot, Windsurf, Kiro, and more
 - **🎨 Beautiful CLI** - Delightful terminal experience
 
@@ -87,24 +86,6 @@ agent-kit add -t rule                      # Add a rule
 agent-kit add -t skill                     # Add a skill
 agent-kit add -t command -n my-command     # Quick create
 agent-kit add --target cursor -t rule -n my-rule  # Full example
-```
-
-### `pull`
-
-Fetch the latest updates from the agent-kit repository. Supports targeting different AI coding agents.
-
-```bash
-agent-kit pull                         # Interactive mode (prompts for target)
-agent-kit pull -t cursor               # Pull to Cursor IDE
-agent-kit pull -t github-copilot       # Pull to GitHub Copilot
-agent-kit pull -t windsurf             # Pull to Windsurf
-agent-kit pull -t kiro                 # Pull to Kiro
-agent-kit pull -c                      # Only pull commands
-agent-kit pull -r                      # Only pull rules
-agent-kit pull -s                      # Only pull skills
-agent-kit pull -p                      # Only update Powers (Kiro only)
-agent-kit pull -f                      # Force overwrite without confirmation
-agent-kit pull -t cursor -r -f         # Pull rules to Cursor with force
 ```
 
 ### `list`
@@ -365,9 +346,6 @@ agent-kit init -t kiro -p
 
 # Install all Powers without prompts
 agent-kit init -t kiro -p -a
-
-# Update installed Powers
-agent-kit pull -t kiro -p
 
 # List installed Powers
 agent-kit list -p

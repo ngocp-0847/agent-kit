@@ -146,7 +146,7 @@ This guide helps resolve common issues when working with Kiro Powers.
 ### Power Update Fails
 
 **Symptoms:**
-- `agent-kit pull -p` fails
+- Power reinstallation fails
 - Version mismatch errors
 
 **Solutions:**
@@ -156,12 +156,7 @@ This guide helps resolve common issues when working with Kiro Powers.
    agent-kit list -p -v
    ```
 
-2. **Force Update**
-   ```bash
-   agent-kit pull -t kiro -p -f
-   ```
-
-3. **Manual Update**
+2. **Manual Update**
    ```bash
    # Remove and reinstall
    agent-kit remove --target kiro -t power -n power-name -f
