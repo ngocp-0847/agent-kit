@@ -4,7 +4,6 @@ import { addCommand } from "./commands/add";
 import { initCommand } from "./commands/init";
 import { listCommand } from "./commands/list";
 import { mcpCommand } from "./commands/mcp";
-import { pullCommand } from "./commands/pull";
 import { removeCommand } from "./commands/remove";
 import { printBanner, printVersion } from "./utils/branding";
 
@@ -24,7 +23,6 @@ const main = defineCommand({
   subCommands: {
     init: initCommand,
     add: addCommand,
-    pull: pullCommand,
     list: listCommand,
     remove: removeCommand,
     mcp: mcpCommand,
