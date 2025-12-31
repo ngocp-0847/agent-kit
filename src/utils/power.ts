@@ -791,14 +791,22 @@ export async function installPowerFromLocal(powerName: string, cwd: string = pro
     const powerInfo = createPowerInfoFromPackage(sourcePath);
     if (!powerInfo) { result.errors.push(`Failed to read Power package info`); return result; }
 
+    // Copy entire power folder to .kiro/powers/<power-name>/
+    const powerInstallDir = getKiroPowerInstallDir(powerName, cwd);
+    ensureDir(powerInstallDir);
+    cpSync(sourcePath, powerInstallDir, { recursive: true });
+    result.added.push(`Power folder: ${powerName}`);
+
+    // Merge MCP config into .kiro/settings/mcp.json
     const mcpConfigPath = join(cwd, ".kiro", "settings", "mcp.json");
-    const mcpResult = await installMcpServers(sourcePath, mcpConfigPath);
+    const mcpResult = await installMcpServers(powerInstallDir, mcpConfigPath);
     result.added.push(...mcpResult.added.map(s => `MCP server: ${s}`));
     result.skipped.push(...mcpResult.skipped.map(s => `MCP server: ${s}`));
     result.errors.push(...mcpResult.errors);
 
+    // Copy steering files to .kiro/steering/
     const steeringDir = join(cwd, ".kiro", "steering");
-    const steeringResult = await installSteeringFiles(sourcePath, steeringDir);
+    const steeringResult = await installSteeringFiles(powerInstallDir, steeringDir);
     result.added.push(...steeringResult.added.map(f => `Steering file: ${f}`));
     result.skipped.push(...steeringResult.skipped.map(f => `Steering file: ${f}`));
     result.errors.push(...steeringResult.errors);
@@ -841,6 +849,13 @@ export async function uninstallPower(powerName: string, cwd: string = process.cw
     const steeringResult = await removeSteeringFiles(powerName, steeringDir, cwd);
     result.added.push(...steeringResult.added.map(f => `Steering file: ${f}`));
     result.errors.push(...steeringResult.errors);
+
+    // Remove power folder from .kiro/powers/<power-name>/
+    const powerInstallDir = getKiroPowerInstallDir(powerName, cwd);
+    if (existsSync(powerInstallDir)) {
+      removeFile(powerInstallDir);
+      result.added.push(`Power folder: ${powerName}`);
+    }
 
     const updatedPowers = getInstalledPowers(cwd).filter(power => power.name !== powerName);
     saveInstalledPowers(updatedPowers, cwd);
@@ -944,24 +959,31 @@ export class PowerManagerImpl implements PowerManager {
   async update(_powerName: string): Promise<void> { throw new Error("Power update functionality not yet implemented"); }
   async getMetadata(powerName: string): Promise<PowerMetadata | null> { return getInstalledPowerMetadata(powerName, this.cwd); }
 
-  async installLocalPower(powerPath: string, _powerName: string): Promise<void> {
+  async installLocalPower(powerPath: string, powerName: string): Promise<void> {
     const packageJsonPath = join(powerPath, "package.json");
     if (!fileExists(packageJsonPath)) throw new Error(`Invalid Power: package.json not found at ${packageJsonPath}`);
 
     const powerInfo = createPowerInfoFromPackage(powerPath);
     if (!powerInfo) throw new Error(`Failed to read Power package info from ${powerPath}`);
 
-    const mcpConfigPath = join(this.cwd, ".kiro", "settings", "mcp.json");
-    await installMcpServers(powerPath, mcpConfigPath);
+    // Copy entire power folder to .kiro/powers/<power-name>/
+    const powerInstallDir = getKiroPowerInstallDir(powerName, this.cwd);
+    ensureDir(powerInstallDir);
+    cpSync(powerPath, powerInstallDir, { recursive: true });
 
+    // Merge MCP config into .kiro/settings/mcp.json
+    const mcpConfigPath = join(this.cwd, ".kiro", "settings", "mcp.json");
+    await installMcpServers(powerInstallDir, mcpConfigPath);
+
+    // Copy steering files to .kiro/steering/
     const steeringDir = join(this.cwd, ".kiro", "steering");
-    await installSteeringFiles(powerPath, steeringDir);
+    await installSteeringFiles(powerInstallDir, steeringDir);
 
     const components: InstalledComponents = { mcpServers: [], steeringFiles: [] };
-    const mcpConfig = readPowerMcpConfig(powerPath);
+    const mcpConfig = readPowerMcpConfig(powerInstallDir);
     if (mcpConfig?.mcpServers) components.mcpServers = Object.keys(mcpConfig.mcpServers);
 
-    const powerSteeringDir = join(powerPath, "steering");
+    const powerSteeringDir = join(powerInstallDir, "steering");
     if (existsSync(powerSteeringDir)) components.steeringFiles = readdirSync(powerSteeringDir).filter((f: string) => f.endsWith(".md"));
 
     addInstalledPower(powerInfo, components, this.cwd);
