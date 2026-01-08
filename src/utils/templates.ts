@@ -384,13 +384,13 @@ export function generateCopilotIndex(
   if (skills.length > 0) {
     output += "## Skills\n\n";
     output +=
-      "These are comprehensive guides for specialized domains. GitHub Copilot will automatically discover and use skills from the `.claude/skills/` directory:\n\n";
+      "These are comprehensive guides for specialized domains. GitHub Copilot will automatically discover and use skills from the `.github/skills/` directory:\n\n";
     for (const skill of skills) {
-      output += `- **${skill}**: Available at \`.claude/skills/${skill}/SKILL.md\` - automatically loaded when working on ${skill} tasks\n`;
+      output += `- **${skill}**: Available at \`.github/skills/${skill}/SKILL.md\` - automatically loaded when working on ${skill} tasks\n`;
     }
     output += "\n";
     output +=
-      "**Note**: Skills in `.claude/skills/` are automatically discovered by GitHub Copilot and don't need to be explicitly referenced.\n\n";
+      "**Note**: Skills in `.github/skills/` are automatically discovered by GitHub Copilot and don't need to be explicitly referenced.\n\n";
   }
 
   output += "## Usage Guidelines\n\n";
@@ -399,7 +399,7 @@ export function generateCopilotIndex(
     "- **Prompt Files**: Type `/` in chat to see available prompts, then select one to use\n";
   output += "- **Rules**: Reference rules when they apply to the current coding task\n";
   output +=
-    "- **Skills**: Skills in `.claude/skills/` are automatically discovered and used by GitHub Copilot\n";
+    "- **Skills**: Skills in `.github/skills/` are automatically discovered and used by GitHub Copilot\n";
   output +=
     "- **Always Apply Rules**: These are automatically considered, but you can reference them for specific guidance\n\n";
 
