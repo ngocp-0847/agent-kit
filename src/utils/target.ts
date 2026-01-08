@@ -44,10 +44,10 @@ export const TARGET_CONFIGS: Record<InstructionTarget, TargetConfig> = {
   },
   "github-copilot": {
     label: "GitHub Copilot",
-    hint: ".github/copilot-instructions/ directory",
+    hint: ".github/instructions/ directory",
     commandsLabel: "commands",
-    rulesLabel: "rules",
-    rulesExtension: ".md",
+    rulesLabel: "instructions",
+    rulesExtension: ".instructions.md",
     commandsExtension: ".md",
   },
   "google-antigravity": {

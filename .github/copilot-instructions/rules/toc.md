@@ -1,9 +1,3 @@
----
-applyTo: "**"
----
-
-# Navigation Guide
-
 You have multiple specialized rules organized into **Skills** (comprehensive guides with references) and **Rules** (concise best practices).
 
 ## Skills

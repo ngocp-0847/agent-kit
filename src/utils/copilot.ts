@@ -15,7 +15,6 @@ import {
 } from "./fs";
 import {
   copyLocalSkill,
-  extractFrontmatter,
   fetchMultipleTemplates,
   generateCopilotIndex,
   stripFrontmatter,
@@ -25,7 +24,6 @@ export interface CopilotInstallResult {
   commands: string[];
   rules: string[];
   skills: string[];
-  alwaysApplyRules: string[];
 }
 
 function installCopilotCommands(
@@ -53,31 +51,25 @@ function installCopilotCommands(
 function installCopilotRules(
   rulesDir: string,
   selectedRules: string[],
-): { installed: string[]; alwaysApply: string[] } {
-  if (selectedRules.length === 0) return { installed: [], alwaysApply: [] };
+): { installed: string[] } {
+  if (selectedRules.length === 0) return { installed: [] };
 
   ensureDir(rulesDir);
   const rulesMap = fetchMultipleTemplates("rules", selectedRules);
   const installed: string[] = [];
-  const alwaysApply: string[] = [];
 
   for (const [filename, content] of rulesMap) {
-    const frontmatter = extractFrontmatter(content);
-    const cleanContent = stripFrontmatter(content);
+    // Convert to .instructions.md format for VS Code Copilot
+    // Keep frontmatter with applyTo glob pattern
+    const baseName = filename.replace(/\.(md|mdc)$/, "");
+    const instructionsFilename = `${baseName}.instructions.md`;
+    const filePath = join(rulesDir, instructionsFilename);
+    writeFile(filePath, content);
 
-    // Templates are now .md, but handle .mdc for backward compatibility
-    const mdFilename = filename.endsWith(".md") ? filename : filename.replace(/\.mdc$/, ".md");
-    const filePath = join(rulesDir, mdFilename);
-    writeFile(filePath, cleanContent);
-
-    installed.push(mdFilename);
-
-    if (frontmatter.alwaysApply) {
-      alwaysApply.push(mdFilename);
-    }
+    installed.push(instructionsFilename);
   }
 
-  return { installed, alwaysApply };
+  return { installed };
 }
 
 function installCopilotSkills(
@@ -139,22 +131,20 @@ export function installCopilotInstructions(
   selectedSkills: string[],
 ): CopilotInstallResult {
   const promptsDir = getCopilotPromptsDir(cwd);
-  const rulesDir = getCopilotRulesDir(cwd);
+  const instructionsDir = getCopilotRulesDir(cwd);
   const skillsDir = getCopilotSkillsDir(cwd);
   const copilotIndexPath = getCopilotInstructionsPath(cwd);
 
   const installedCommands = installCopilotCommands(promptsDir, selectedCommands);
-  const rulesResult = installCopilotRules(rulesDir, selectedRules);
+  const rulesResult = installCopilotRules(instructionsDir, selectedRules);
   const installedSkills = installCopilotSkills(skillsDir, selectedSkills);
 
   const installedRules = rulesResult.installed;
-  const alwaysApplyRules = rulesResult.alwaysApply;
 
   const indexContent = generateCopilotIndex(
     installedCommands,
     installedRules,
     installedSkills,
-    alwaysApplyRules,
   );
 
   writeFile(copilotIndexPath, indexContent);
@@ -164,15 +154,16 @@ export function installCopilotInstructions(
   if (installedCommands.length > 0) {
     console.log(pc.dim(`   └─ ${promptsDir}/`));
   }
-  console.log(pc.dim(`   └─ ${getCopilotInstructionsDir(cwd)}/`));
+  if (installedRules.length > 0) {
+    console.log(pc.dim(`   └─ ${instructionsDir}/`));
+  }
   if (installedSkills.length > 0) {
-    console.log(pc.dim(`   └─ ${getCopilotSkillsDir(cwd)}/`));
+    console.log(pc.dim(`   └─ ${skillsDir}/`));
   }
 
   return {
     commands: installedCommands,
-    rules: installedRules.map((r) => r.replace(/\.md$/, "")),
+    rules: installedRules.map((r) => r.replace(/\.instructions\.md$/, "")),
     skills: installedSkills,
-    alwaysApplyRules,
   };
 }

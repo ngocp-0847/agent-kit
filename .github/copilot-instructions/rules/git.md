@@ -1,7 +1,3 @@
----
-applyTo: "**"
----
-
 # Git Conventions
 
 ## Commit Messages

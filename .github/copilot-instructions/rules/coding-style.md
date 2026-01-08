@@ -1,9 +1,3 @@
----
-applyTo: "**/*.{ts,tsx,js,jsx,py,java,go,rs,c,cpp,cs}"
----
-
-# Coding Style Guidelines
-
 - Type safety first: Prefer TypeScript with explicit types on public functions, props, and return values. Avoid any and implicit any.
 - Guard clauses over nesting: Use early returns and guard clauses instead of deeply nested if/else blocks; keep branches short and readable.
 - Use descriptive variable and function/const names. Also, event functions should be named with a "handle" prefix, like "handleClick" for onClick and "handleKeyDown" for onKeyDown.

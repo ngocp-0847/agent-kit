@@ -47,5 +47,6 @@ yarn.lock
 
 # Github Copilot
 .github/copilot-instructions.md
-.github/copilot-instructions/
+.github/instructions/
 .github/prompts/
+.github/skills/
