@@ -179,7 +179,7 @@ async function handleCopilotInstallation(
 
   try {
     s.start("Installing GitHub Copilot instructions...");
-    const result = await installCopilotInstructions(
+    const result = installCopilotInstructions(
       cwd,
       selectedCommands,
       selectedRules,
@@ -364,7 +364,7 @@ async function handleAntiGravityInstallation(
     // Install commands as workflows
     if (selectedCommands.length > 0) {
       s.start("Installing workflows...");
-      const templates = await fetchMultipleTemplates("commands", selectedCommands);
+      const templates = fetchMultipleTemplates("commands", selectedCommands);
 
       for (const [filename, content] of templates) {
         const transformedContent = transformCommandToWorkflow(content, filename);
@@ -378,7 +378,7 @@ async function handleAntiGravityInstallation(
     // Install rules with AntiGravity format
     if (selectedRules.length > 0) {
       s.start("Installing rules...");
-      const templates = await fetchMultipleTemplates("rules", selectedRules);
+      const templates = fetchMultipleTemplates("rules", selectedRules);
 
       for (const [filename, content] of templates) {
         const transformedContent = transformRuleForAntiGravity(content, filename);
@@ -588,8 +588,8 @@ async function handleKiroInstallation(
     const allSteeringTemplates = [...selectedCommands, ...selectedRules];
     if (allSteeringTemplates.length > 0) {
       s.start("Installing steering files...");
-      const templates = await fetchMultipleTemplates("commands", selectedCommands);
-      const ruleTemplates = await fetchMultipleTemplates("rules", selectedRules);
+      const templates = fetchMultipleTemplates("commands", selectedCommands);
+      const ruleTemplates = fetchMultipleTemplates("rules", selectedRules);
 
       // Merge templates
       for (const [filename, content] of templates) {
@@ -844,7 +844,7 @@ async function installTemplates(
     return result;
   }
 
-  const templates = await fetchMultipleTemplates(type, templatesToInstall);
+  const templates = fetchMultipleTemplates(type, templatesToInstall);
 
   ensureDir(targetDir);
 
@@ -1177,7 +1177,7 @@ export const initCommand = defineCommand({
 
     try {
       s.start("Fetching template manifest...");
-      manifest = await fetchTemplateManifest();
+      manifest = fetchTemplateManifest();
       s.stop("Template manifest loaded");
     } catch (error) {
       s.stop("Failed to fetch manifest");

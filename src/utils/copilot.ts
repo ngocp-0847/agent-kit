@@ -3,17 +3,14 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { printSuccess } from "./branding";
 import {
-  deleteFile,
   dirExists,
   ensureDir,
   fileExists,
-  getCopilotCommandsDir,
   getCopilotInstructionsDir,
   getCopilotInstructionsPath,
   getCopilotPromptsDir,
   getCopilotRulesDir,
   getCopilotSkillsDir,
-  readFile,
   writeFile,
 } from "./fs";
 import {
@@ -31,14 +28,14 @@ export interface CopilotInstallResult {
   alwaysApplyRules: string[];
 }
 
-async function installCopilotCommands(
+function installCopilotCommands(
   promptsDir: string,
   selectedCommands: string[],
-): Promise<string[]> {
+): string[] {
   if (selectedCommands.length === 0) return [];
 
   ensureDir(promptsDir);
-  const commandsMap = await fetchMultipleTemplates("commands", selectedCommands);
+  const commandsMap = fetchMultipleTemplates("commands", selectedCommands);
   const installed: string[] = [];
 
   for (const [filename, content] of commandsMap) {
@@ -53,14 +50,14 @@ async function installCopilotCommands(
   return installed;
 }
 
-async function installCopilotRules(
+function installCopilotRules(
   rulesDir: string,
   selectedRules: string[],
-): Promise<{ installed: string[]; alwaysApply: string[] }> {
+): { installed: string[]; alwaysApply: string[] } {
   if (selectedRules.length === 0) return { installed: [], alwaysApply: [] };
 
   ensureDir(rulesDir);
-  const rulesMap = await fetchMultipleTemplates("rules", selectedRules);
+  const rulesMap = fetchMultipleTemplates("rules", selectedRules);
   const installed: string[] = [];
   const alwaysApply: string[] = [];
 
@@ -83,10 +80,10 @@ async function installCopilotRules(
   return { installed, alwaysApply };
 }
 
-async function installCopilotSkills(
+function installCopilotSkills(
   skillsDir: string,
   selectedSkills: string[],
-): Promise<string[]> {
+): string[] {
   if (selectedSkills.length === 0) return [];
 
   ensureDir(skillsDir);
@@ -135,22 +132,20 @@ export async function checkCopilotConflicts(cwd: string, force: boolean): Promis
   return true;
 }
 
-export async function installCopilotInstructions(
+export function installCopilotInstructions(
   cwd: string,
   selectedCommands: string[],
   selectedRules: string[],
   selectedSkills: string[],
-): Promise<CopilotInstallResult> {
+): CopilotInstallResult {
   const promptsDir = getCopilotPromptsDir(cwd);
   const rulesDir = getCopilotRulesDir(cwd);
   const skillsDir = getCopilotSkillsDir(cwd);
   const copilotIndexPath = getCopilotInstructionsPath(cwd);
 
-  const [installedCommands, rulesResult, installedSkills] = await Promise.all([
-    installCopilotCommands(promptsDir, selectedCommands),
-    installCopilotRules(rulesDir, selectedRules),
-    installCopilotSkills(skillsDir, selectedSkills),
-  ]);
+  const installedCommands = installCopilotCommands(promptsDir, selectedCommands);
+  const rulesResult = installCopilotRules(rulesDir, selectedRules);
+  const installedSkills = installCopilotSkills(skillsDir, selectedSkills);
 
   const installedRules = rulesResult.installed;
   const alwaysApplyRules = rulesResult.alwaysApply;

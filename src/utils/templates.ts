@@ -1,6 +1,5 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { REPO_RAW_URL, TEMPLATE_PATHS } from "./constants";
 import {
   copyDir,
   deleteFile,
@@ -27,8 +26,16 @@ export interface TemplateItem {
 }
 
 function getLocalTemplatesDir(): string {
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  return join(currentDir, "..", "templates");
+  const currentFile = fileURLToPath(import.meta.url);
+  const currentDir = dirname(currentFile);
+
+  // When running from source (tsx src/cli.ts), currentDir is src/utils
+  // When running from compiled (dist/cli.js), currentDir is dist
+  // We need to go up to the project root and then into templates/
+  const isSourceMode = currentDir.includes("/src/") || currentDir.endsWith("/src");
+  const levelsUp = isSourceMode ? join("..", "..") : "..";
+
+  return join(currentDir, levelsUp, "templates");
 }
 
 function getLocalManifest(): TemplateManifest | null {
@@ -129,56 +136,36 @@ export function copyLocalSkill(
   return true;
 }
 
-export async function fetchTemplateManifest(): Promise<TemplateManifest> {
+export function fetchTemplateManifest(): TemplateManifest {
   const localManifest = getLocalManifest();
   if (localManifest) {
     return localManifest;
   }
 
-  const url = `${REPO_RAW_URL}/templates/manifest.json`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch template manifest: ${response.statusText}`);
-  }
-
-  return response.json() as Promise<TemplateManifest>;
+  throw new Error("Local template manifest not found. Please ensure templates directory exists.");
 }
 
-export async function fetchTemplateContent(type: TemplateType, filename: string): Promise<string> {
+export function fetchTemplateContent(type: TemplateType, filename: string): string {
   const localContent = getLocalTemplateContent(type, filename);
   if (localContent !== null) {
     return localContent;
   }
 
-  const templatePath = TEMPLATE_PATHS[type];
-  const url = `${REPO_RAW_URL}/${templatePath}/${filename}`;
-
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch template ${filename}: ${response.statusText}`);
-  }
-
-  return response.text();
+  throw new Error(`Local template ${filename} not found in ${type} directory.`);
 }
 
-export async function fetchMultipleTemplates(
+export function fetchMultipleTemplates(
   type: TemplateType,
   filenames: string[],
-): Promise<Map<string, string>> {
+): Map<string, string> {
   const results = new Map<string, string>();
 
-  const fetchPromises = filenames.map(async (filename) => {
-    const content = await fetchTemplateContent(type, filename);
-    return { filename, content };
-  });
-
-  const settled = await Promise.allSettled(fetchPromises);
-
-  for (const result of settled) {
-    if (result.status === "fulfilled") {
-      results.set(result.value.filename, result.value.content);
+  for (const filename of filenames) {
+    try {
+      const content = fetchTemplateContent(type, filename);
+      results.set(filename, content);
+    } catch {
+      // Skip templates that don't exist locally
     }
   }
 
